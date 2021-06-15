@@ -272,7 +272,7 @@ class Simulation:
 
         with meshio.xdmf.TimeSeriesWriter(self.xmf_filename) as xmdf_writer:
             xmdf_writer.write_points_cells(
-                self.mesh.nodes, {self.mesh.cell_name: self.mesh.cells}
+                self.mesh.nodes, [(self.mesh.cell_name, self.mesh.cells)]
             )
             while self.t < self.tmax:
                 if ite % 20 == 0:

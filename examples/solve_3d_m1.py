@@ -13,7 +13,7 @@ os.environ["CUDA_CACHE_DISABLE"] = "1"
 
 if __name__ == "__main__":
 
-    input_fn = "../data/mesh/cube_64.msh"
+    input_fn = "../data/mesh/unit_cube_32.msh"
     output_fn = "m1_3d.xjmf"
 
     r = 0.05
