@@ -5,7 +5,6 @@ _pycache__/
 
 #Data
 *.dat
-*.geo
 *.h5
 *.h5m
 *.msh
