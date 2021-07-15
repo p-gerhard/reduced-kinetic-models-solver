@@ -1,6 +1,8 @@
 #ifndef MATHS_RATIONAL_CL
 #define MATHS_RATIONAL_CL
 
+#include "rational.h"
+
 float evaluate_polynomial_simple(__constant const float *p, const int n,
 								 const float x)
 {
@@ -32,7 +34,7 @@ float evaluate_rational_simple(__constant const float *num,
 		s1 = num[0];
 		s2 = denom[0];
 #pragma unroll
-		for (unsigned i = 1; i < count; i++) {
+		for (int i = 1; i < count; i++) {
 			s1 *= z;
 			s2 *= z;
 			s1 += num[i];
