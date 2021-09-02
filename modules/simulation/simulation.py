@@ -166,6 +166,9 @@ class Simulation:
             "-cl-fast-relaxed-math",
         ]
 
+        os.environ["PYOPENCL_BUILD_OPTIONS"] = "-I {}".format(kernel_base)
+
+
         self.ocl_ctx = cl.create_some_context(interactive=True)
         self.ocl_prg = cl.Program(self.ocl_ctx, self.source).build(
             options=self.ocl_options
