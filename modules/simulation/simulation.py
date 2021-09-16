@@ -18,6 +18,25 @@ from pyopencl import _find_pyopencl_include_path, _DEFAULT_INCLUDE_OPTIONS
 from modules.mesh import *
 
 
+def _build_subfolder_list(base_folder, dest_folder=None):
+    subfolder_list = []
+    for r, d, f in os.walk(base_folder):
+        for file in f:
+            subfolder = os.path.relpath(r, base_folder)
+
+            if dest_folder is not None:
+                subfolder = os.path.join(dest_folder, subfolder)
+
+            subfolder_list.append(subfolder)
+
+    return list(set(subfolder_list))
+
+
+def _recursive_remove(dir_list):
+    for dir in dir_list:
+        shutil.rmtree(dir, ignore_errors=False, onerror=None)
+
+
 def get_ite_title(ite, t, elapsed):
     return "ite = {}, t = {:f}, elapsed (s) = {:f}".format(ite, t, elapsed)
 
@@ -159,48 +178,33 @@ class Simulation:
 
         return src
 
-    def __ocl_build_and_setup(self, copy_kernel_to_ocl_path=False):
+    def __ocl_build_and_setup(self, copy_kernel_to_ocl_path=True):
         current_file_path = os.path.dirname(os.path.realpath(__file__))
         kernel_base = os.path.abspath(
             os.path.join(current_file_path, os.path.join("..", "kernels"))
         )
-        self.ocl_options = [
-            "-I",
-            kernel_base,
-            "-cl-fast-relaxed-math",
-        ]
-        # ocl_include_path = _find_pyopencl_include_path()
-        # print(ocl_include_path)
-        # rel_dir = []
-        # rel_file  = []
+        self.ocl_options = ["-cl-fast-relaxed-math"]
 
-        # if copy_kernel_to_ocl_path:
-        #     for r, d, f in os.walk(kernel_base):
-        #         for file in f:
-        #             rel_dir_tmp = os.path.relpath(r, kernel_base)
-        #             rel_dir.append(rel_dir_tmp)
-        #             rel_file.append(os.path.join(rel_dir_tmp, file))
-        #             print(rel_dir_tmp)
+        if copy_kernel_to_ocl_path:
+            self.ocl_include_default_path = _find_pyopencl_include_path()
+            self.dest_kernel_dir_list = _build_subfolder_list(
+                kernel_base, self.ocl_include_default_path
+            )
+            self.dest_kernel_dir_list = list(set(self.dest_kernel_dir_list))
 
-        # os.makedirs(os.path.join(ocl_include_path, rel_dir), exist_ok=True)
-        # os.removedirs()
-
-        # rel_dir = list(set(rel_dir))
-        # print(rel_dir)
-        # exit()
-        # for dir in rel_dir:
-        #     dest_dir = os.path.join(ocl_include_path, dir)
-        #     os.makedirs(dest_dir, exist_ok=True)
-        #     shutil.rmtree(dest_dir, ignore_errors=False, onerror=None)
-
-        # os.environ["PYOPENCL_BUILD_OPTIONS"] = "-I {}".format(kernel_base)
+            shutil.copytree(
+                kernel_base, self.ocl_include_default_path, dirs_exist_ok=True
+            )
+        else :
+            self.ocl_options.extend(["-I", kernel_base])
 
         self.ocl_ctx = cl.create_some_context(interactive=True)
-        _DEFAULT_INCLUDE_OPTIONS = []
         self.ocl_prg = cl.Program(self.ocl_ctx, self.source)
-        print(_DEFAULT_INCLUDE_OPTIONS)
         self.ocl_prg.build(options=self.ocl_options)
-        print(_DEFAULT_INCLUDE_OPTIONS)
+
+        if copy_kernel_to_ocl_path:
+            _recursive_remove(self.dest_kernel_dir_list)
+
         self.ocl_prop = cl.command_queue_properties.PROFILING_ENABLE
         self.ocl_queue = cl.CommandQueue(self.ocl_ctx, properties=self.ocl_prop)
 
@@ -226,6 +230,9 @@ class Simulation:
         logging.info(
             "{:<30}: {:>6.8f} MB".format("GPU buffer's size", gpu_memory / 1e6)
         )
+
+    def __clean(self):
+        _recursive_remove(self.dest_kernel_dir_list)
 
     def __allocate_cpu_buffer(self):
         pass
@@ -277,6 +284,7 @@ class Simulation:
 
     def solve(self):
         self.__ocl_build_and_setup()
+
         self.__ocl_allocate_devices_buffer()
         self.__setup_exporter()
         self.t = 0
