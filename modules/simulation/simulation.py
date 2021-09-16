@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
+import glob
 import logging
+import os
+import shutil
 import time
+
 
 import matplotlib.pyplot as plt
 import meshio
 import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
+from pyopencl import _find_pyopencl_include_path, _DEFAULT_INCLUDE_OPTIONS
 
 from modules.mesh import *
 
@@ -155,21 +159,51 @@ class Simulation:
 
         return src
 
-    def __ocl_build_and_setup(self):
+    def __ocl_build_and_setup(self, copy_kernel_to_ocl_path=False):
         current_file_path = os.path.dirname(os.path.realpath(__file__))
-        kernel_base = os.path.abspath(os.path.join(current_file_path, "../kernels"))
-
+        kernel_base = os.path.abspath(
+            os.path.join(current_file_path, os.path.join("..", "kernels"))
+        )
         self.ocl_options = [
             "-I",
             kernel_base,
             "-Werror",
             "-cl-fast-relaxed-math",
         ]
+        # ocl_include_path = _find_pyopencl_include_path()
+        # print(ocl_include_path)
+        # rel_dir = []  
+        # rel_file  = []
 
-        os.environ["PYOPENCL_BUILD_OPTIONS"] = "-I {}".format(kernel_base)
 
+
+
+
+        # if copy_kernel_to_ocl_path:
+        #     for r, d, f in os.walk(kernel_base):
+        #         for file in f:
+        #             rel_dir_tmp = os.path.relpath(r, kernel_base)
+        #             rel_dir.append(rel_dir_tmp)
+        #             rel_file.append(os.path.join(rel_dir_tmp, file))
+        #             print(rel_dir_tmp)
+
+                    # os.makedirs(os.path.join(ocl_include_path, rel_dir), exist_ok=True)
+                    # os.removedirs()
+
+            # rel_dir = list(set(rel_dir))
+            # print(rel_dir)
+            # exit()
+            # for dir in rel_dir:
+            #     dest_dir = os.path.join(ocl_include_path, dir)
+            #     os.makedirs(dest_dir, exist_ok=True)
+            #     shutil.rmtree(dest_dir, ignore_errors=False, onerror=None)
+
+
+
+        # os.environ["PYOPENCL_BUILD_OPTIONS"] = "-I {}".format(kernel_base)
 
         self.ocl_ctx = cl.create_some_context(interactive=True)
+        _DEFAULT_INCLUDE_OPTIONS = []
         self.ocl_prg = cl.Program(self.ocl_ctx, self.source).build(
             options=self.ocl_options
         )
