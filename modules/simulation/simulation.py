@@ -172,12 +172,8 @@ class Simulation:
         ]
         # ocl_include_path = _find_pyopencl_include_path()
         # print(ocl_include_path)
-        # rel_dir = []  
+        # rel_dir = []
         # rel_file  = []
-
-
-
-
 
         # if copy_kernel_to_ocl_path:
         #     for r, d, f in os.walk(kernel_base):
@@ -187,27 +183,25 @@ class Simulation:
         #             rel_file.append(os.path.join(rel_dir_tmp, file))
         #             print(rel_dir_tmp)
 
-                    # os.makedirs(os.path.join(ocl_include_path, rel_dir), exist_ok=True)
-                    # os.removedirs()
+        # os.makedirs(os.path.join(ocl_include_path, rel_dir), exist_ok=True)
+        # os.removedirs()
 
-            # rel_dir = list(set(rel_dir))
-            # print(rel_dir)
-            # exit()
-            # for dir in rel_dir:
-            #     dest_dir = os.path.join(ocl_include_path, dir)
-            #     os.makedirs(dest_dir, exist_ok=True)
-            #     shutil.rmtree(dest_dir, ignore_errors=False, onerror=None)
-
-
+        # rel_dir = list(set(rel_dir))
+        # print(rel_dir)
+        # exit()
+        # for dir in rel_dir:
+        #     dest_dir = os.path.join(ocl_include_path, dir)
+        #     os.makedirs(dest_dir, exist_ok=True)
+        #     shutil.rmtree(dest_dir, ignore_errors=False, onerror=None)
 
         # os.environ["PYOPENCL_BUILD_OPTIONS"] = "-I {}".format(kernel_base)
 
         self.ocl_ctx = cl.create_some_context(interactive=True)
         _DEFAULT_INCLUDE_OPTIONS = []
-        self.ocl_prg = cl.Program(self.ocl_ctx, self.source).build(
-            options=self.ocl_options
-        )
-
+        self.ocl_prg = cl.Program(self.ocl_ctx, self.source)
+        print(_DEFAULT_INCLUDE_OPTIONS)
+        self.ocl_prg.build(options=self.ocl_options)
+        print(_DEFAULT_INCLUDE_OPTIONS)
         self.ocl_prop = cl.command_queue_properties.PROFILING_ENABLE
         self.ocl_queue = cl.CommandQueue(self.ocl_ctx, properties=self.ocl_prop)
 
