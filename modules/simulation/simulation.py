@@ -167,7 +167,6 @@ class Simulation:
         self.ocl_options = [
             "-I",
             kernel_base,
-            "-Werror",
             "-cl-fast-relaxed-math",
         ]
         # ocl_include_path = _find_pyopencl_include_path()
