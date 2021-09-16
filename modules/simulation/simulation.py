@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from distutils import dir_util
 import glob
 import logging
 import os
@@ -192,9 +193,12 @@ class Simulation:
             )
             self.dest_kernel_dir_list = list(set(self.dest_kernel_dir_list))
 
-            shutil.copytree(
-                kernel_base, self.ocl_include_default_path, dirs_exist_ok=True
-            )
+            # shutil.copytree(
+            #     kernel_base, self.ocl_include_default_path, dirs_exist_ok=True
+            # )
+
+            dir_util.copy_tree(kernel_base, self.ocl_include_default_path)
+
         else :
             self.ocl_options.extend(["-I", kernel_base])
 
