@@ -19,10 +19,11 @@ if __name__ == "__main__":
     r = 0.05
     v = (4.0 / 3.0) * np.pi * r * r * r
     parameters = {
+        "model": "moment",
         "m": 4,
         "dim": 3,
         "tmax": 0.20,
-        "cfl": 0.05,
+        "cfl": 0.1,
         "sigma": 0,
         "alpha": 1,  # 1 non-abs / 0 abs
         "beta": 0.0,  # 0 spec.   / 1 diff.

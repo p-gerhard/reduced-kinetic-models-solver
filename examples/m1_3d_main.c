@@ -17,12 +17,12 @@
 #define SRC_R _src_r_
 #define SRC_V _src_v_
 
-#define USE_M1_SLOPE_LIMITER_ON_R
+#define IS_MOMENT_MODEL
 
 #include <m1/m1_s2.cl>
 #include <solver/solver_3d.cl>
 
-static void src_gaussian_line_source_3D(const float x[DIM], const float t,
+static void src_gaussian_line_source_3d(const float x[DIM], const float t,
 										float w[M])
 {
 	const float d = (x[0] - SRC_X) * (x[0] - SRC_X) +
@@ -36,7 +36,7 @@ static void src_gaussian_line_source_3D(const float x[DIM], const float t,
 
 #pragma unroll
 	for (int iw = 0; iw < M; iw++) {
-		w[iw] = 0.;
+		w[iw] = 0.f;
 	}
 
 	w[0] = max(gauss, vaccum);
@@ -48,7 +48,7 @@ static void m1_src_circle_3d(const float x[DIM], const float t, float wn[M])
 					(x[1] - SRC_Y) * (x[1] - SRC_Y) +
 					(x[2] - SRC_Z) * (x[2] - SRC_Z);
 
-	const float vaccum = 1e-4;
+	const float vaccum = 1e-4f;
 
 	if (t < SRC_TOFF) {
 		if (d > SRC_R * SRC_R) {
@@ -72,8 +72,8 @@ static void m1_src_circle_3d(const float x[DIM], const float t, float wn[M])
 
 static void m1_source(const float x[DIM], const float t, float s[M])
 {
-	// src_gaussian_line_source_3D(x, t, s);
-	m1_src_circle_3d(x, t, s);
+	src_gaussian_line_source_3d(x, t, s);
+	// m1_src_circle_3d(x, t, s);
 }
 
 void vf_init_cond(const float x[DIM], const float t, float s[M])
@@ -93,7 +93,8 @@ void vf_source(const float x[DIM], const float wn[M], const float t, float s[M])
 void vf_num_flux(const float wL[M], const float wR[M], const float vn[DIM],
 				 float flux[M])
 {
-	m1_num_flux_rusanov(wL, wR, vn, flux);
+	// m1_num_flux_rusanov(wL, wR, vn, flux);
+	m1_num_flux_kinetic_lebedev(wL, wR, vn, flux);
 }
 
 void vf_num_flux_boundary(const float wL[M], const float wR[M],

@@ -19,9 +19,10 @@ if __name__ == "__main__":
     r = 0.05
     v = (4.0 / 3.0) * np.pi * r * r * r
     parameters = {
-        "m": 4,
+        "model": "ordinates",
+        "m": 6,
         "dim": 3,
-        "tmax": 0.20,
+        "tmax": 1.0,
         "cfl": 0.05,
         "sigma": 0,
         "alpha": 1,  # 1 non-abs / 0 abs
@@ -32,7 +33,7 @@ if __name__ == "__main__":
         "src_z": 0.5,
         "src_r": r,
         "src_v": v,
-        "src_file": "m1_3d_main.c",
+        "src_file": "sn_3d_main.c",
     }
 
     simu = Simulation(parameters, mesh_filename=input_fn, output_filename=output_fn)

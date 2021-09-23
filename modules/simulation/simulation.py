@@ -4,89 +4,29 @@
 from distutils import dir_util
 import glob
 import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 import os
 import shutil
 import time
-
 
 import matplotlib.pyplot as plt
 import meshio
 import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
-from pyopencl import _find_pyopencl_include_path, _DEFAULT_INCLUDE_OPTIONS
+from pyopencl import _find_pyopencl_include_path
 
 from modules.mesh import *
-
-
-def _build_subfolder_list(base_folder, dest_folder=None):
-    subfolder_list = []
-    for r, d, f in os.walk(base_folder):
-        for file in f:
-            subfolder = os.path.relpath(r, base_folder)
-
-            if dest_folder is not None:
-                subfolder = os.path.join(dest_folder, subfolder)
-
-            subfolder_list.append(subfolder)
-
-    return list(set(subfolder_list))
-
-
-def _recursive_remove(dir_list):
-    for dir in dir_list:
-        shutil.rmtree(dir, ignore_errors=False, onerror=None)
-
-
-def get_ite_title(ite, t, elapsed):
-    return "ite = {}, t = {:f}, elapsed (s) = {:f}".format(ite, t, elapsed)
-
-
-def check_parameters(ref_param, input_param):
-    is_missing = False
-    for key in ref_param.keys():
-        if key not in input_param.keys():
-            print(
-                "[Error] - Required parameter {k} of type {t} is missing".format(
-                    k=key, t=ref_param[key]
-                )
-            )
-            is_missing = True
-
-    if is_missing:
-        exit()
-
-
-def is_num_type(val):
-    return np.issubdtype(type(val), np.number)
-
-
-def safe_assign(key, val, type_to_check):
-
-    if type_to_check == int:
-        if is_num_type(val):
-            return int(val)
-        else:
-            raise TypeError("{} must be numeric".format(key))
-
-    if type_to_check == float:
-        if is_num_type(val):
-            return float(val)
-        else:
-            raise TypeError("{} must be numeric".format(key))
-
-    if type_to_check == str:
-        if isinstance(val, str):
-            return val
-        else:
-            raise TypeError("{} must be str".format(key))
+from .helpers import *
 
 
 class Simulation:
     def __init__(self, parameters, mesh_filename=None, output_filename="output.xmf"):
         logging.basicConfig(
             format="[%(asctime)s] - %(levelname)s - %(message)s",
-            level=logging.INFO,
             datefmt="%m/%d/%Y %I:%M:%S %p",
         )
         self.__set_req_parameters(parameters)
@@ -107,6 +47,7 @@ class Simulation:
 
         # Check if required parameters are provided
         ref_param = {
+            "model": str,
             "dim": int,
             "m": int,
             "tmax": float,
@@ -116,6 +57,7 @@ class Simulation:
 
         check_parameters(ref_param, parameters)
 
+        self.model = safe_assign("model", parameters["model"], ref_param["model"])
         self.dim = safe_assign("dim", parameters["dim"], ref_param["dim"])
         self.m = safe_assign("m", parameters["m"], ref_param["m"])
         self.tmax = safe_assign("tmax", parameters["tmax"], ref_param["tmax"])
@@ -163,16 +105,17 @@ class Simulation:
         with open(self.src_file, "r") as f:
             src = f.read()
 
-        print("[info]- simulation's parameters:")
-
+        logger.info("{:<30}:".format("Simulation's parameters"))
+        nb_tab = 5
         for k, v in self.parameters.items():
             if is_num_type(v):
                 if np.issubdtype(type(v), np.integer):
-                    print("\t- {:<12}  {:<12d}".format(k, v))
+                    print(nb_tab * "\t" + "- {:<12}  {:<12d}".format(k, v))
                 if np.issubdtype(type(v), np.inexact):
-                    print("\t- {:<12}  {:<12.6f}".format(k, v))
-
+                    print(nb_tab * "\t" + "- {:<12}  {:<12.6f}".format(k, v))
                 src = src.replace("_{}_".format(k), "({})".format(v))
+            else:
+                print(nb_tab * "\t" + "- {:<12}  {:<12}".format(k, v))
 
         if print_src:
             print(src)
@@ -186,28 +129,26 @@ class Simulation:
         )
         self.ocl_options = ["-cl-fast-relaxed-math"]
 
+        # Copy kernel source files to PyOpenCL's default kernel folder
         if copy_kernel_to_ocl_path:
             self.ocl_include_default_path = _find_pyopencl_include_path()
-            self.dest_kernel_dir_list = _build_subfolder_list(
+            self.dest_kernel_dir_list = build_subfolder_list(
                 kernel_base, self.ocl_include_default_path
             )
             self.dest_kernel_dir_list = list(set(self.dest_kernel_dir_list))
 
-            # shutil.copytree(
-            #     kernel_base, self.ocl_include_default_path, dirs_exist_ok=True
-            # )
-
             dir_util.copy_tree(kernel_base, self.ocl_include_default_path)
 
-        else :
+        else:
             self.ocl_options.extend(["-I", kernel_base])
 
         self.ocl_ctx = cl.create_some_context(interactive=True)
         self.ocl_prg = cl.Program(self.ocl_ctx, self.source)
         self.ocl_prg.build(options=self.ocl_options)
 
+        # Remove copied files
         if copy_kernel_to_ocl_path:
-            _recursive_remove(self.dest_kernel_dir_list)
+            recursive_remove(self.dest_kernel_dir_list)
 
         self.ocl_prop = cl.command_queue_properties.PROFILING_ENABLE
         self.ocl_queue = cl.CommandQueue(self.ocl_ctx, properties=self.ocl_prop)
@@ -231,15 +172,14 @@ class Simulation:
         gpu_memory += self.cells_center_gpu.nbytes
         gpu_memory += self.elem2elem_gpu.nbytes
 
-        logging.info(
-            "{:<30}: {:>6.8f} MB".format("GPU buffer's size", gpu_memory / 1e6)
-        )
+        # Special case of Discrete Orfinates method
+        if self.model == "ordinates":
+            self.wn_macro_gpu = cl_array.empty(
+                self.ocl_queue, 4 * nb_cells, dtype=self.dtype
+            )
+            gpu_memory += self.wn_macro_gpu.nbytes
 
-    def __clean(self):
-        _recursive_remove(self.dest_kernel_dir_list)
-
-    def __allocate_cpu_buffer(self):
-        pass
+        logger.info("{:<30}: {:>6.8f} MB".format("GPU buffer's size", gpu_memory / 1e6))
 
     def __setup_exporter(self):
 
@@ -251,19 +191,14 @@ class Simulation:
         self.xmf_filename = os.path.join(self.base_filename, self.xmf_filename)
 
         # Host buffer for memory copies
+        if self.model == "ordinates":
+            self.wn_macro_cpu = np.empty(4 * self.mesh.nb_cells, dtype=self.dtype)
+
         self.wn_cpu = np.empty(self.m * self.mesh.nb_cells, dtype=self.dtype)
 
         # Buffer for time plotting
         self.t_tab = []
         self.w0_tot = []
-        nc = self.mesh.nb_cells
-
-        self.cell_data = {
-            "w0": {self.mesh.cell_name: self.wn_cpu[0 * nc : 1 * nc]},
-            "w1": {self.mesh.cell_name: self.wn_cpu[1 * nc : 2 * nc]},
-            "w2": {self.mesh.cell_name: self.wn_cpu[2 * nc : 3 * nc]},
-            "w3": {self.mesh.cell_name: self.wn_cpu[3 * nc : 4 * nc]},
-        }
 
         try:
             os.remove(self.xmf_filename)
@@ -275,14 +210,43 @@ class Simulation:
         except OSError:
             pass
 
-    def __write_data(self, xdmf_writer):
+    def __export_data(self, xdmf_writer):
         nc = self.mesh.nb_cells
-        cd = {
-            "w0": {self.mesh.cell_name: self.wn_cpu[0 * nc : 1 * nc]},
-            "w1": {self.mesh.cell_name: self.wn_cpu[1 * nc : 2 * nc]},
-            "w2": {self.mesh.cell_name: self.wn_cpu[2 * nc : 3 * nc]},
-            "w3": {self.mesh.cell_name: self.wn_cpu[3 * nc : 4 * nc]},
-        }
+        if self.model == "ordinates":
+            self.ocl_prg.sn_compute_macro(
+                self.ocl_queue,
+                (self.mesh.nb_cells,),
+                None,
+                self.wn_gpu.data,
+                self.wn_macro_gpu.data,
+            ).wait()
+
+            w = cl_array.sum(self.wn_macro_gpu[0:nc]).get()
+
+            cd = {
+                "w0": {self.mesh.cell_name: self.wn_macro_cpu[0 * nc : 1 * nc]},
+                "w1": {self.mesh.cell_name: self.wn_macro_cpu[1 * nc : 2 * nc]},
+                "w2": {self.mesh.cell_name: self.wn_macro_cpu[2 * nc : 3 * nc]},
+                "w3": {self.mesh.cell_name: self.wn_macro_cpu[3 * nc : 4 * nc]},
+            }
+
+            cl.enqueue_copy(
+                self.ocl_queue, self.wn_macro_cpu, self.wn_macro_gpu.data
+            ).wait()
+        else:
+
+            w = cl_array.sum(self.wn_gpu[0:nc]).get()
+            cd = {
+                "w0": {self.mesh.cell_name: self.wn_cpu[0 * nc : 1 * nc]},
+                "w1": {self.mesh.cell_name: self.wn_cpu[1 * nc : 2 * nc]},
+                "w2": {self.mesh.cell_name: self.wn_cpu[2 * nc : 3 * nc]},
+                "w3": {self.mesh.cell_name: self.wn_cpu[3 * nc : 4 * nc]},
+            }
+
+            cl.enqueue_copy(self.ocl_queue, self.wn_cpu, self.wn_gpu.data).wait()
+
+        self.w0_tot.append(w)
+        self.t_tab.append(self.t)
 
         xdmf_writer.write_data(self.t, cell_data=cd)
 
@@ -294,7 +258,7 @@ class Simulation:
         self.t = 0
         ite = 0
 
-        logging.info("{:<30}".format("OpenCL computations started"))
+        logger.info("{:<30}".format("OpenCL computations started"))
 
         t1 = time.time()
         # Init solution
@@ -312,23 +276,13 @@ class Simulation:
             [self.dtype, None, None, None, None]
         )
 
-        with meshio.xdmf.TimeSeriesWriter(self.xmf_filename) as xmdf_writer:
-            xmdf_writer.write_points_cells(
+        with meshio.xdmf.TimeSeriesWriter(self.xmf_filename) as xdmf_writer:
+            xdmf_writer.write_points_cells(
                 self.mesh.nodes, [(self.mesh.cell_name, self.mesh.cells)]
             )
             while self.t < self.tmax:
                 if ite % 20 == 0:
-                    w = cl_array.sum(self.wn_gpu[0 : self.mesh.nb_cells]).get()
-
-                    # Warning in Pn we need to multiply by sqrt(4 * pi) to get w
-                    self.w0_tot.append(w)
-                    self.t_tab.append(self.t)
-
-                    cl.enqueue_copy(
-                        self.ocl_queue, self.wn_cpu, self.wn_gpu.data
-                    ).wait()
-
-                    self.__write_data(xmdf_writer)
+                    self.__export_data(xdmf_writer)
 
                 kernel_euler_time_step(
                     self.ocl_queue,
@@ -348,7 +302,7 @@ class Simulation:
                 ite += 1
         t2 = time.time()
 
-        logging.info("{:<30}: {:>6.8f} sec.".format("Computation done in", t2 - t1))
+        logger.info("{:<30}: {:>6.8f} sec.".format("Computation done in", t2 - t1))
 
         w0_tot_filename = os.path.join(
             self.base_filename, "{}{}".format(self.base_filename, "_w0_tot.dat")
@@ -356,13 +310,13 @@ class Simulation:
 
         np.savetxt(w0_tot_filename, np.stack((self.t_tab, self.w0_tot), axis=1))
 
-        logging.info(
+        logger.info(
             "{:<30}: {:<30}".format(
                 "Fields saved in", os.path.abspath(self.xmf_filename)
             )
         )
 
-        logging.info(
+        logger.info(
             "{:<30}: {:<30}".format(
                 "Total density saved in", os.path.abspath(w0_tot_filename)
             )

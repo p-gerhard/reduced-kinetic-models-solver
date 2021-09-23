@@ -1,3 +1,3 @@
-from . import (mesh)
+from . import mesh, simulation 
 
-__all__ = ["mesh"]
+__all__ = ["mesh", "simulation"]

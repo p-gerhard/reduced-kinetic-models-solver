@@ -1,4 +1,8 @@
 import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 import os
 import meshio
 import numpy as np
@@ -56,10 +60,10 @@ class MeshStructured:
             assert isinstance(filename, str)
 
             start = time.time()
-            logging.info("{:<30}: {:<30}".format("Reading file", self.filename))
+            logger.info("{:<30}: {:<30}".format("Reading file", self.filename))
             self.mesh = meshio.read(filename)
             duration = time.time() - start
-            logging.info("{:<30}: {:<6.8f} sec.".format("Read file in", duration))
+            logger.info("{:<30}: {:<6.8f} sec.".format("Read file in", duration))
             assert self.cell_name in self.mesh.cells_dict.keys()
 
             # Ref. on meshio points data
@@ -73,7 +77,7 @@ class MeshStructured:
 
             self.nb_cells, nb_loc_node = self.cells.shape
             assert nb_loc_node == self.elem_data["NODE_PER_ELEM"]
-            logging.info("{:<30}: {:<d}".format("Number of cells", self.nb_cells))
+            logger.info("{:<30}: {:<d}".format("Number of cells", self.nb_cells))
 
             self.cells = np.ravel(self.cells, order="C")
             self.points = np.ravel(self.nodes, order="C")
@@ -87,10 +91,10 @@ class MeshStructured:
             extract_cell_size(self.nodes, self.cells, self.cell_size)
             duration = time.time() - start
 
-            logging.info("{:<30}: {:>6.8f} sec.".format("Sizes extracted in", duration))
-            logging.info("{:<30}: {:>6.8f}".format("Size dx", self.cell_size[0]))
-            logging.info("{:<30}: {:>6.8f}".format("Size dy", self.cell_size[1]))
-            logging.info("{:<30}: {:>6.8f}".format("Size dz", self.cell_size[2]))
+            logger.info("{:<30}: {:>6.8f} sec.".format("Sizes extracted in", duration))
+            logger.info("{:<30}: {:>6.8f}".format("Size dx", self.cell_size[0]))
+            logger.info("{:<30}: {:>6.8f}".format("Size dy", self.cell_size[1]))
+            logger.info("{:<30}: {:>6.8f}".format("Size dz", self.cell_size[2]))
 
             self.dx = self.cell_size[0]
             self.dy = self.cell_size[1]
@@ -102,24 +106,24 @@ class MeshStructured:
             )
 
             duration = time.time() - start
-            logging.info("{:<30}: {:>6.8f} sec.".format("Cells proceeded in", duration))
+            logger.info("{:<30}: {:>6.8f} sec.".format("Cells proceeded in", duration))
             start = time.time()
 
             process_nodes(self.nb_nodes, self.cell_size, self.nodes)
             duration = time.time() - start
-            logging.info("{:<30}: {:>6.8f} sec.".format("Nodes proceeded in", duration))
+            logger.info("{:<30}: {:>6.8f} sec.".format("Nodes proceeded in", duration))
             start = time.time()
 
             build_elem2elem(self.nb_cells, self.cells, self.elem2elem)
             duration = time.time() - start
-            logging.info(
+            logger.info(
                 "{:<30}: {:>6.8f} sec.".format("Connectivity built in", duration)
             )
 
             start = time.time()
             check_elem2elem(self.nb_cells, self.elem2elem)
             duration = time.time() - start
-            logging.info(
+            logger.info(
                 "{:<30}: {:>6.8f} sec.".format("Connectivity checked in", duration)
             )
 
