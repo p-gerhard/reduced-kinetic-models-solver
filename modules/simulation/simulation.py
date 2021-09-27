@@ -21,6 +21,7 @@ from pyopencl import _find_pyopencl_include_path
 
 from modules.mesh import *
 from .helpers import *
+from .model import is_implemented, get_model_parameters
 
 
 class Simulation:
@@ -29,76 +30,83 @@ class Simulation:
             format="[%(asctime)s] - %(levelname)s - %(message)s",
             datefmt="%m/%d/%Y %I:%M:%S %p",
         )
-        self.__set_req_parameters(parameters)
 
-        self.mesh = MeshStructured(mesh_filename, dim=3)
+        is_missing = False
+
+        # Check solver input parameter type
+        ref_param = {
+            "model_type": str,
+            "model_name": str,
+            "model_order": int,
+            "tmax": float,
+            "cfl": float,
+            "use_muscl": bool,
+        }
+
+        for key in ref_param.keys():
+            if key not in parameters.keys():
+                logger.error(
+                    "Required parameter {k} of type {t} is missing !".format(
+                        k=key, t=ref_param[key]
+                    )
+                )
+                is_missing = True
+
+        if is_missing:
+            exit()
+
+        # Fill the class instance with solver parameters
+        self.tmax = np.float32(parameters["tmax"])
+        self.cfl = np.float32(parameters["cfl"])
+        self.use_muscl = parameters["use_muscl"]
+
+        if not (
+            is_implemented(
+                parameters["model_type"],
+                parameters["model_name"],
+                parameters["model_order"],
+            )
+        ):
+            exit()
+
+        self.model_type = parameters["model_type"]
+        self.model_name = parameters["model_name"]
+        self.model_order = np.int32(parameters["model_order"])
+
+        # Fill the class instance model parameters
+        self.m, self.dim, self.src_file, self.model_ocl_options = get_model_parameters(
+            self.model_type, self.model_name, self.model_order
+        )
+
+        # Add mesh parameters
+        self.mesh = MeshStructured(mesh_filename, dim=self.dim)
+        self.ngrid = self.mesh.nb_cells
+        self.dt = compute_dt(
+            self.dim, self.cfl, self.mesh.dx, self.mesh.dy, self.mesh.dz
+        )
+
+        # Append extra model parameters to the dictionary of parameters
+        self.parameters = parameters
+        self.parameters.update(
+            {
+                "model_ocl_options": self.model_ocl_options,
+                "dim": self.dim,
+                "m": self.m,
+                "src_file": self.src_file,
+                "dt": self.dt,
+                "dx": self.mesh.dx,
+                "dy": self.mesh.dy,
+                "dz": self.mesh.dz,
+                "dz": self.dt,
+                "ngrid": self.ngrid,
+            }
+        )
 
         self.base_filename = output_filename.split(".")[0]
         self.xmf_filename = "{}{}".format(self.base_filename, ".xmf")
 
-        self.parameters = parameters
-
-        self.__update_parameters_with_mesh_data()
-
         self.dtype = np.float32
         self.source = self.__ocl_process_source()
-
-    def __set_req_parameters(self, parameters, input_mesh=False):
-
-        # Check if required parameters are provided
-        ref_param = {
-            "model": str,
-            "dim": int,
-            "m": int,
-            "tmax": float,
-            "cfl": float,
-            "src_file": str,
-        }
-
-        check_parameters(ref_param, parameters)
-
-        self.model = safe_assign("model", parameters["model"], ref_param["model"])
-        self.dim = safe_assign("dim", parameters["dim"], ref_param["dim"])
-        self.m = safe_assign("m", parameters["m"], ref_param["m"])
-        self.tmax = safe_assign("tmax", parameters["tmax"], ref_param["tmax"])
-        self.cfl = safe_assign("cfl", parameters["cfl"], ref_param["cfl"])
-
-        self.src_file = safe_assign(
-            "src_file", parameters["src_file"], ref_param["src_file"]
-        )
-
-    def __update_parameters_with_mesh_data(self):
-        self.ngrid = self.mesh.nb_cells
-        if self.dim == 2:
-            self.dt = (
-                self.cfl
-                * (self.mesh.dx * self.mesh.dy)
-                / (2.0 * self.mesh.dx + 2.0 * self.mesh.dy)
-            )
-
-            dz = 1
-
-        if self.dim == 3:
-            self.dt = (
-                self.cfl
-                * (self.mesh.dx * self.mesh.dy * self.mesh.dz)
-                / (
-                    2.0 * self.mesh.dx * self.mesh.dy
-                    + 2.0 * self.mesh.dy * self.mesh.dz
-                    + 2.0 * self.mesh.dz * self.mesh.dx
-                )
-            )
-            dz = self.mesh.dz
-
-        self.parameters.update(
-            {
-                "dx": np.float32(self.mesh.dx),
-                "dy": np.float32(self.mesh.dy),
-                "dz": np.float32(dz),
-                "dt": self.dt,
-                "ngrid": self.mesh.nb_cells,
-            }
-        )
 
     def __ocl_process_source(self, print_src=False):
 
@@ -107,15 +115,17 @@ class Simulation:
 
         logger.info("{:<30}:".format("Simulation's parameters"))
         nb_tab = 5
-        for k, v in self.parameters.items():
+        for k, v in sorted(self.parameters.items()):
             if is_num_type(v):
                 if np.issubdtype(type(v), np.integer):
-                    print(nb_tab * "\t" + "- {:<12}  {:<12d}".format(k, v))
+                    print(nb_tab * "\t" + "- {:<20} {:<12d}".format(k, v))
                 if np.issubdtype(type(v), np.inexact):
-                    print(nb_tab * "\t" + "- {:<12}  {:<12.6f}".format(k, v))
+                    print(nb_tab * "\t" + "- {:<20} {:<12.6f}".format(k, v))
                 src = src.replace("_{}_".format(k), "({})".format(v))
+            elif isinstance(v, list):
+                print(nb_tab * "\t" + "- {:<20} {}".format(k, v))
             else:
-                print(nb_tab * "\t" + "- {:<12}  {:<12}".format(k, v))
+                print(nb_tab * "\t" + "- {:<20} {:<12}".format(k, v))
 
         if print_src:
             print(src)
@@ -127,8 +137,12 @@ class Simulation:
         kernel_base = os.path.abspath(
             os.path.join(current_file_path, os.path.join("..", "kernels"))
         )
-        self.ocl_options = ["-cl-fast-relaxed-math"]
 
+        self.ocl_options = self.model_ocl_options + ["-cl-fast-relaxed-math"]
+        
+        if self.use_muscl:
+            self.ocl_options.extend(["-D USE_MUSCL"])
+        
         # Copy kernel source files to PyOpenCL's default kernel folder
         if copy_kernel_to_ocl_path:
             self.ocl_include_default_path = _find_pyopencl_include_path()
@@ -172,10 +186,15 @@ class Simulation:
         gpu_memory += self.cells_center_gpu.nbytes
         gpu_memory += self.elem2elem_gpu.nbytes
 
-        # Special case of Discrete Orfinates method
-        if self.model == "ordinates":
+        # Special case of Discrete Ordinates method
+        if self.model_type == "ordinates":
+            if self.dim == 2:
+                self.nb_macro_field = 3
+            else:
+                self.nb_macro_field = 4
+
             self.wn_macro_gpu = cl_array.empty(
-                self.ocl_queue, 4 * nb_cells, dtype=self.dtype
+                self.ocl_queue, self.nb_macro_field * nb_cells, dtype=self.dtype
             )
             gpu_memory += self.wn_macro_gpu.nbytes
 
@@ -191,8 +210,10 @@ class Simulation:
         self.xmf_filename = os.path.join(self.base_filename, self.xmf_filename)
 
         # Host buffer for memory copies
-        if self.model == "ordinates":
-            self.wn_macro_cpu = np.empty(4 * self.mesh.nb_cells, dtype=self.dtype)
+        if self.model_type == "ordinates":
+            self.wn_macro_cpu = np.empty(
+                self.nb_macro_field * self.mesh.nb_cells, dtype=self.dtype
+            )
 
         self.wn_cpu = np.empty(self.m * self.mesh.nb_cells, dtype=self.dtype)
 
@@ -212,7 +233,7 @@ class Simulation:
 
     def __export_data(self, xdmf_writer):
         nc = self.mesh.nb_cells
-        if self.model == "ordinates":
+        if self.model_type == "ordinates":
             self.ocl_prg.sn_compute_macro(
                 self.ocl_queue,
                 (self.mesh.nb_cells,),
@@ -227,8 +248,10 @@ class Simulation:
                 "w0": {self.mesh.cell_name: self.wn_macro_cpu[0 * nc : 1 * nc]},
                 "w1": {self.mesh.cell_name: self.wn_macro_cpu[1 * nc : 2 * nc]},
                 "w2": {self.mesh.cell_name: self.wn_macro_cpu[2 * nc : 3 * nc]},
-                "w3": {self.mesh.cell_name: self.wn_macro_cpu[3 * nc : 4 * nc]},
             }
+
+            if self.dim == 3:
+                cd["w3"] = {self.mesh.cell_name: self.wn_macro_cpu[3 * nc : 4 * nc]}
 
             cl.enqueue_copy(
                 self.ocl_queue, self.wn_macro_cpu, self.wn_macro_gpu.data
@@ -236,12 +259,15 @@ class Simulation:
         else:
 
             w = cl_array.sum(self.wn_gpu[0:nc]).get()
+
             cd = {
-                "w0": {self.mesh.cell_name: self.wn_cpu[0 * nc : 1 * nc]},
-                "w1": {self.mesh.cell_name: self.wn_cpu[1 * nc : 2 * nc]},
-                "w2": {self.mesh.cell_name: self.wn_cpu[2 * nc : 3 * nc]},
-                "w3": {self.mesh.cell_name: self.wn_cpu[3 * nc : 4 * nc]},
+                "w0": {self.mesh.cell_name: self.wn_macro_cpu[0 * nc : 1 * nc]},
+                "w1": {self.mesh.cell_name: self.wn_macro_cpu[1 * nc : 2 * nc]},
+                "w2": {self.mesh.cell_name: self.wn_macro_cpu[2 * nc : 3 * nc]},
             }
+
+            if self.dim == 3:
+                cd["w3"] = {self.mesh.cell_name: self.wn_macro_cpu[3 * nc : 4 * nc]}
 
             cl.enqueue_copy(self.ocl_queue, self.wn_cpu, self.wn_gpu.data).wait()
 
@@ -280,7 +306,7 @@ class Simulation:
             xdmf_writer.write_points_cells(
                 self.mesh.nodes, [(self.mesh.cell_name, self.mesh.cells)]
             )
-            while self.t < self.tmax:
+            while self.t <= self.tmax:
                 if ite % 20 == 0:
                     self.__export_data(xdmf_writer)
 

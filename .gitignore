@@ -64,3 +64,6 @@ _pycache__/
 
 # Build
 /build/*
+
+# Build
+/data/mesh/*

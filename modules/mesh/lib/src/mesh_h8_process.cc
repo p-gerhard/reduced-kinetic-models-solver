@@ -4,11 +4,8 @@
 #include <iostream>
 
 #include <absl/container/flat_hash_map.h>
-#include "mesh_process.h"
+#include "mesh_h8_process.h"
 
-#define IS_3D
-
-#ifdef IS_3D
 /* GMSH hexahedron loc_nodes_id:
  *
  *         y
@@ -25,13 +22,13 @@
  *      4----------5
  */
 
-#define ELEM_CODE 5
-#define PHY_DIM 3
-#define FACE_PER_ELEM 6
-#define NODE_PER_ELEM 8
-#define NODE_PER_FACE 4
+#define H8_ELEM_CODE 5
+#define H8_PHY_DIM 3
+#define H8_FACE_PER_ELEM 6
+#define H8_NODE_PER_ELEM 8
+#define H8_NODE_PER_FACE 4
 
-const int face_to_loc_node[FACE_PER_ELEM][NODE_PER_FACE] = {
+const int h8_face_to_loc_node[H8_FACE_PER_ELEM][H8_NODE_PER_FACE] = {
 	{ 1, 2, 6, 5 }, // Right
 	{ 0, 4, 7, 3 }, // Left
 	{ 2, 3, 7, 6 }, // Front
@@ -40,7 +37,7 @@ const int face_to_loc_node[FACE_PER_ELEM][NODE_PER_FACE] = {
 	{ 0, 3, 2, 1 }, // South
 };
 
-const float face_normals[FACE_PER_ELEM][3] = {
+const float h8_face_normals[H8_FACE_PER_ELEM][3] = {
 	{ 1, 0, 0 }, // Right
 	{ -1, 0, 0 }, // Left
 	{ 0, 1, 0 }, // Front
@@ -49,7 +46,7 @@ const float face_normals[FACE_PER_ELEM][3] = {
 	{ 0, 0, -1 } // South
 };
 
-const int face_edge_len[FACE_PER_ELEM][2] = {
+const int h8_face_edge_len[H8_FACE_PER_ELEM][2] = {
 	{ 2, 1 }, // Right : dz, dy
 	{ 2, 1 }, // Left  : dz, dy
 	{ 2, 0 }, // Front : dz, dx
@@ -57,29 +54,7 @@ const int face_edge_len[FACE_PER_ELEM][2] = {
 	{ 0, 1 }, // North : dx, dy
 	{ 0, 1 }, // South : dx, dy
 };
-
-const int lex_order[NODE_PER_ELEM] = { 0, 4, 3, 7, 1, 5, 2, 6 };
-#else
-/* GMSH quadrangle loc_nodes_id:
- *
- *       v
- *       ^
- *       |
- * 3-----------2
- * |     |     |
- * |     |     |
- * |     +---- | --> u
- * |           |
- * |           |
- * 0-----------1
- */
-#define ELEM_CODE 3
-#define PHY_DIM 2
-#define FACE_PER_ELEM 4
-#define NODE_PER_ELEM 4
-#define NODE_PER_FACE 2
-const unsigned int lex_order[NODE_PER_ELEM] = { 1, 2, 3, 4 };
-#endif
+const int h8_lex_order[H8_NODE_PER_ELEM] = { 0, 4, 3, 7, 1, 5, 2, 6 };
 
 #define MESH_TOL 1e-6
 
@@ -94,7 +69,7 @@ static inline void cross_product(const float x[3], const float y[3],
 	res[2] = x[0] * y[1] - x[1] * y[0];
 }
 
-static inline void lexsort_hexa8(float nodes[24], long nodes_id[8])
+static inline void lexsort_h8(float nodes[24], long nodes_id[8])
 {
 #define SWAP_NODE(i, j)                                                        \
 	const float tmp_x = nodes[3 * i + 0];                                      \
@@ -157,37 +132,35 @@ static inline void lexsort_hexa8(float nodes[24], long nodes_id[8])
 #undef SWAP
 }
 
-void mesh_extract_cell_size(const float *nodes, long *cells, float cell_size[3])
+void mesh_h8_extract_cell_size(const float *nodes, long *cells,
+							   float cell_size[3])
 {
-	long loc_cell_nodes_id[NODE_PER_ELEM];
-	float loc_nodes[NODE_PER_ELEM * PHY_DIM];
+	long loc_cell_nodes_id[H8_NODE_PER_ELEM];
+	float loc_nodes[H8_NODE_PER_ELEM * H8_PHY_DIM];
 	/* Local copy of FIRST cell's node_id */
-	for (int i = 0; i < NODE_PER_ELEM; i++) {
+	for (int i = 0; i < H8_NODE_PER_ELEM; i++) {
 		loc_cell_nodes_id[i] = cells[i];
 	}
 
 	/* Local copy of FIRST node's coordinates */
-	for (int i = 0; i < NODE_PER_ELEM; i++) {
-		for (int k = 0; k < PHY_DIM; k++) {
+	for (int i = 0; i < H8_NODE_PER_ELEM; i++) {
+		for (int k = 0; k < H8_PHY_DIM; k++) {
 			long id_node = loc_cell_nodes_id[i];
-			loc_nodes[PHY_DIM * i + k] = nodes[PHY_DIM * id_node + k];
+			loc_nodes[H8_PHY_DIM * i + k] = nodes[H8_PHY_DIM * id_node + k];
 		}
 	}
 
-#ifdef IS_3D
-	lexsort_hexa8(loc_nodes, loc_cell_nodes_id);
-#else
-	lexsort_quad4(loc_nodes, loc_cell_nodes_id);
-#endif
+	lexsort_h8(loc_nodes, loc_cell_nodes_id);
+
 	/* Re-order */
-	for (int i = 0; i < NODE_PER_ELEM; i++) {
-		cells[lex_order[i]] = loc_cell_nodes_id[i];
+	for (int i = 0; i < H8_NODE_PER_ELEM; i++) {
+		cells[h8_lex_order[i]] = loc_cell_nodes_id[i];
 	}
 
-	for (int i = 0; i < NODE_PER_ELEM; i++) {
+	for (int i = 0; i < H8_NODE_PER_ELEM; i++) {
 		long id_node = cells[i];
-		for (int k = 0; k < PHY_DIM; k++) {
-			loc_nodes[PHY_DIM * i + k] = nodes[PHY_DIM * id_node + k];
+		for (int k = 0; k < H8_PHY_DIM; k++) {
+			loc_nodes[H8_PHY_DIM * i + k] = nodes[H8_PHY_DIM * id_node + k];
 		}
 	}
 
@@ -243,21 +216,21 @@ void mesh_extract_cell_size(const float *nodes, long *cells, float cell_size[3])
 	cell_size[2] = dz[0];
 }
 
-static bool check_normals_hexa8(float nodes[24], const float cell_dim[3])
+static bool check_normals_h8(float nodes[24], const float cell_dim[3])
 {
 	bool check = true;
 
-	for (int id_face = 0; id_face < FACE_PER_ELEM; id_face++) {
+	for (int id_face = 0; id_face < H8_FACE_PER_ELEM; id_face++) {
 		/* Compute face edge between node (n1) and node (n0) */
-		long n0 = face_to_loc_node[id_face][0];
-		long n1 = face_to_loc_node[id_face][1];
+		long n0 = h8_face_to_loc_node[id_face][0];
+		long n1 = h8_face_to_loc_node[id_face][1];
 
 		const float e0[3] = { nodes[3 * n1 + 0] - nodes[3 * n0 + 0],
 							  nodes[3 * n1 + 1] - nodes[3 * n0 + 1],
 							  nodes[3 * n1 + 2] - nodes[3 * n0 + 2] };
 
 		/* Compute face edge between node (n2) and node (n1) */
-		long n2 = face_to_loc_node[id_face][2];
+		long n2 = h8_face_to_loc_node[id_face][2];
 
 		const float e1[3] = { nodes[3 * n2 + 0] - nodes[3 * n1 + 0],
 							  nodes[3 * n2 + 1] - nodes[3 * n1 + 1],
@@ -271,10 +244,10 @@ static bool check_normals_hexa8(float nodes[24], const float cell_dim[3])
 		const float e0_ln = sqrt(e0[0] * e0[0] + e0[1] * e0[1] + e0[2] * e0[2]);
 		const float e1_ln = sqrt(e1[0] * e1[0] + e1[1] * e1[1] + e1[2] * e1[2]);
 
-		int edge_len_id = face_edge_len[id_face][0];
+		int edge_len_id = h8_face_edge_len[id_face][0];
 		check = (check && (fabs(e0_ln - cell_dim[edge_len_id]) < MESH_TOL));
 
-		edge_len_id = face_edge_len[id_face][1];
+		edge_len_id = h8_face_edge_len[id_face][1];
 		check = check && (fabs(e1_ln - cell_dim[edge_len_id]) < MESH_TOL);
 
 		/* Check normal direction */
@@ -282,9 +255,9 @@ static bool check_normals_hexa8(float nodes[24], const float cell_dim[3])
 		float a = (e0_ln * e1_ln);
 		cross_product(e0, e1, n);
 
-		const float n_ref[3] = { face_normals[id_face][0],
-								 face_normals[id_face][1],
-								 face_normals[id_face][2] };
+		const float n_ref[3] = { h8_face_normals[id_face][0],
+								 h8_face_normals[id_face][1],
+								 h8_face_normals[id_face][2] };
 
 		check = check && (fabs(n_ref[0] - n[0] / a) < MESH_TOL);
 		check = check && (fabs(n_ref[1] - n[1] / a) < MESH_TOL);
@@ -294,37 +267,34 @@ static bool check_normals_hexa8(float nodes[24], const float cell_dim[3])
 	return check;
 }
 
-void mesh_process_cells(const long nb_cells, const float cell_size[3],
-						const float *nodes, long *cells, float *cells_center)
+void mesh_h8_process_cells(const long nb_cells, const float cell_size[3],
+						   const float *nodes, long *cells, float *cells_center)
 {
-	long loc_cell_nodes_id[NODE_PER_ELEM];
-	float loc_nodes[NODE_PER_ELEM * PHY_DIM];
+	long loc_cell_nodes_id[H8_NODE_PER_ELEM];
+	float loc_nodes[H8_NODE_PER_ELEM * H8_PHY_DIM];
 
 	for (long id_cell = 0; id_cell < nb_cells; id_cell++) {
 		/* Local copy of cell's node_id */
-		for (int i = 0; i < NODE_PER_ELEM; i++) {
-			loc_cell_nodes_id[i] = cells[NODE_PER_ELEM * id_cell + i];
+		for (int i = 0; i < H8_NODE_PER_ELEM; i++) {
+			loc_cell_nodes_id[i] = cells[H8_NODE_PER_ELEM * id_cell + i];
 		}
 
 		/* Local copy of node's coordinates */
-		for (int i = 0; i < NODE_PER_ELEM; i++) {
-			for (int k = 0; k < PHY_DIM; k++) {
+		for (int i = 0; i < H8_NODE_PER_ELEM; i++) {
+			for (int k = 0; k < H8_PHY_DIM; k++) {
 				long id_node = loc_cell_nodes_id[i];
-				loc_nodes[PHY_DIM * i + k] = nodes[PHY_DIM * id_node + k];
+				loc_nodes[H8_PHY_DIM * i + k] = nodes[H8_PHY_DIM * id_node + k];
 			}
 		}
 
-#ifdef IS_3D
-		lexsort_hexa8(loc_nodes, loc_cell_nodes_id);
-#else
-		lexsort_quad4(loc_nodes, loc_cell_nodes_id);
-#endif
+		lexsort_h8(loc_nodes, loc_cell_nodes_id);
+
 		/* 
          * Re-order cell's node_id and  using the mapping beetween lexicographic 
          * order and desired (Gmsh) order.
          */
-		for (int i = 0; i < NODE_PER_ELEM; i++) {
-			cells[NODE_PER_ELEM * id_cell + lex_order[i]] =
+		for (int i = 0; i < H8_NODE_PER_ELEM; i++) {
+			cells[H8_NODE_PER_ELEM * id_cell + h8_lex_order[i]] =
 				loc_cell_nodes_id[i];
 		}
 
@@ -336,18 +306,18 @@ void mesh_process_cells(const long nb_cells, const float cell_size[3],
 		float sum_y = 0.f;
 		float sum_z = 0.f;
 
-		for (int i = 0; i < NODE_PER_ELEM; i++) {
-			long id_node = cells[NODE_PER_ELEM * id_cell + i];
-			for (int k = 0; k < PHY_DIM; k++) {
-				loc_nodes[PHY_DIM * i + k] = nodes[PHY_DIM * id_node + k];
+		for (int i = 0; i < H8_NODE_PER_ELEM; i++) {
+			long id_node = cells[H8_NODE_PER_ELEM * id_cell + i];
+			for (int k = 0; k < H8_PHY_DIM; k++) {
+				loc_nodes[H8_PHY_DIM * i + k] = nodes[H8_PHY_DIM * id_node + k];
 			}
-			sum_x += loc_nodes[PHY_DIM * i + 0];
-			sum_y += loc_nodes[PHY_DIM * i + 1];
-			sum_z += loc_nodes[PHY_DIM * i + 2];
+			sum_x += loc_nodes[H8_PHY_DIM * i + 0];
+			sum_y += loc_nodes[H8_PHY_DIM * i + 1];
+			sum_z += loc_nodes[H8_PHY_DIM * i + 2];
 		}
 
 		/* Check norms */
-		bool check = check_normals_hexa8(loc_nodes, cell_size);
+		bool check = check_normals_h8(loc_nodes, cell_size);
 		assert(check);
 
 		/* Compute cell centers using true hexahedron formula */
@@ -364,47 +334,47 @@ void mesh_process_cells(const long nb_cells, const float cell_size[3],
 		check = check && (fabs(center_1[2] - center_2[2]) < MESH_TOL);
 		assert(check);
 
-		cells_center[PHY_DIM * id_cell + 0] = center_1[0];
-		cells_center[PHY_DIM * id_cell + 1] = center_1[1];
-		cells_center[PHY_DIM * id_cell + 2] = center_1[2];
+		cells_center[H8_PHY_DIM * id_cell + 0] = center_1[0];
+		cells_center[H8_PHY_DIM * id_cell + 1] = center_1[1];
+		cells_center[H8_PHY_DIM * id_cell + 2] = center_1[2];
 	}
 }
 
-void mesh_process_nodes(const long nb_nodes, const float cell_size[3],
-						float *nodes)
+void mesh_h8_process_nodes(const long nb_nodes, const float cell_size[3],
+						   float *nodes)
 {
 	/* TODO verif deplacement */
 	const float half_dx = 0.5f * cell_size[0];
 	const float half_dy = 0.5f * cell_size[1];
-#ifdef IS_3D
 	const float half_dz = 0.5f * cell_size[2];
-#endif
-	float old_coord[PHY_DIM];
+
+	float old_coord[H8_PHY_DIM];
 	for (long id_node = 0; id_node < nb_nodes; id_node++) {
-		old_coord[0] = nodes[PHY_DIM * id_node + 0];
-		old_coord[1] = nodes[PHY_DIM * id_node + 1];
+		old_coord[0] = nodes[H8_PHY_DIM * id_node + 0];
+		old_coord[1] = nodes[H8_PHY_DIM * id_node + 1];
 
-		const float x = rint(nodes[PHY_DIM * id_node + 0] / half_dx) * half_dx;
-		const float y = rint(nodes[PHY_DIM * id_node + 1] / half_dy) * half_dy;
+		const float x =
+			rint(nodes[H8_PHY_DIM * id_node + 0] / half_dx) * half_dx;
+		const float y =
+			rint(nodes[H8_PHY_DIM * id_node + 1] / half_dy) * half_dy;
 
-		nodes[PHY_DIM * id_node + 0] = x;
-		nodes[PHY_DIM * id_node + 1] = y;
+		nodes[H8_PHY_DIM * id_node + 0] = x;
+		nodes[H8_PHY_DIM * id_node + 1] = y;
 
-		assert(fabs(old_coord[0] - nodes[PHY_DIM * id_node + 0]) < MESH_TOL);
-		assert(fabs(old_coord[1] - nodes[PHY_DIM * id_node + 1]) < MESH_TOL);
+		assert(fabs(old_coord[0] - nodes[H8_PHY_DIM * id_node + 0]) < MESH_TOL);
+		assert(fabs(old_coord[1] - nodes[H8_PHY_DIM * id_node + 1]) < MESH_TOL);
 
-#ifdef IS_3D
-		old_coord[2] = nodes[PHY_DIM * id_node + 2];
-		const float z = rint(nodes[PHY_DIM * id_node + 2] / half_dz) * half_dz;
+		old_coord[2] = nodes[H8_PHY_DIM * id_node + 2];
+		const float z =
+			rint(nodes[H8_PHY_DIM * id_node + 2] / half_dz) * half_dz;
 
-		nodes[PHY_DIM * id_node + 2] = z;
-		assert(fabs(old_coord[2] - nodes[PHY_DIM * id_node + 2]) < MESH_TOL);
-#endif
+		nodes[H8_PHY_DIM * id_node + 2] = z;
+		assert(fabs(old_coord[2] - nodes[H8_PHY_DIM * id_node + 2]) < MESH_TOL);
 	}
 }
 
-void mesh_build_elem2elem(const long nb_cells, const long *cells,
-						  long *elem2elem)
+void mesh_h8_build_elem2elem(const long nb_cells, const long *cells,
+							 long *elem2elem)
 {
 	/* Hashmap container : key is a tuple of 4 long and the value is 1 long */
 	flat_hash_map<key4_t, long> face_map;
@@ -413,12 +383,13 @@ void mesh_build_elem2elem(const long nb_cells, const long *cells,
 	face_map.reserve(nb_cells);
 	/* Build the map using direct face orientation (node id) */
 	for (long id_elem = 0; id_elem < nb_cells; id_elem++) {
-		long offset = id_elem * NODE_PER_ELEM;
-		for (int id_face = 0; id_face < FACE_PER_ELEM; id_face++) {
-			key = std::make_tuple(cells[offset + face_to_loc_node[id_face][0]],
-								  cells[offset + face_to_loc_node[id_face][1]],
-								  cells[offset + face_to_loc_node[id_face][2]],
-								  cells[offset + face_to_loc_node[id_face][3]]);
+		long offset = id_elem * H8_NODE_PER_ELEM;
+		for (int id_face = 0; id_face < H8_FACE_PER_ELEM; id_face++) {
+			key = std::make_tuple(
+				cells[offset + h8_face_to_loc_node[id_face][0]],
+				cells[offset + h8_face_to_loc_node[id_face][1]],
+				cells[offset + h8_face_to_loc_node[id_face][2]],
+				cells[offset + h8_face_to_loc_node[id_face][3]]);
 
 			auto res = face_map.try_emplace(key, id_elem);
 
@@ -430,35 +401,36 @@ void mesh_build_elem2elem(const long nb_cells, const long *cells,
 
 	/* Search corresponding faces using reverse face orientation (node id) */
 	for (long id_elem = 0; id_elem < nb_cells; id_elem++) {
-		long offset = id_elem * NODE_PER_ELEM;
-		for (int id_face = 0; id_face < FACE_PER_ELEM; id_face++) {
+		long offset = id_elem * H8_NODE_PER_ELEM;
+		for (int id_face = 0; id_face < H8_FACE_PER_ELEM; id_face++) {
 			/* The permutation of H8 face swap the 2nd and the last element */
 
-			key = std::make_tuple(cells[offset + face_to_loc_node[id_face][0]],
-								  cells[offset + face_to_loc_node[id_face][3]],
-								  cells[offset + face_to_loc_node[id_face][2]],
-								  cells[offset + face_to_loc_node[id_face][1]]);
+			key = std::make_tuple(
+				cells[offset + h8_face_to_loc_node[id_face][0]],
+				cells[offset + h8_face_to_loc_node[id_face][3]],
+				cells[offset + h8_face_to_loc_node[id_face][2]],
+				cells[offset + h8_face_to_loc_node[id_face][1]]);
 
 			auto res = face_map.find(key);
 
 			if (res != face_map.end()) {
-				elem2elem[id_elem * FACE_PER_ELEM + id_face] = res->second;
+				elem2elem[id_elem * H8_FACE_PER_ELEM + id_face] = res->second;
 			}
 		}
 	}
 	face_map.clear();
 }
 
-void mesh_check_elem2elem(const long nb_cells, const long *elem2elem)
+void mesh_h8_check_elem2elem(const long nb_cells, const long *elem2elem)
 {
 	/* Check that the neighbour of the neighbour is id_elem */
 	for (long id_elem = 0; id_elem < nb_cells; id_elem++) {
-		for (int id_couple = 0; id_couple < FACE_PER_ELEM / 2; id_couple++) {
-			long e0 = elem2elem[id_elem * FACE_PER_ELEM + 2 * id_couple + 0];
+		for (int id_couple = 0; id_couple < H8_FACE_PER_ELEM / 2; id_couple++) {
+			long e0 = elem2elem[id_elem * H8_FACE_PER_ELEM + 2 * id_couple + 0];
 
 			/* Avoid boundary Face */
 			if (e0 != -1) {
-				long e1 = elem2elem[e0 * FACE_PER_ELEM + 2 * id_couple + 1];
+				long e1 = elem2elem[e0 * H8_FACE_PER_ELEM + 2 * id_couple + 1];
 				assert(id_elem == e1);
 			}
 		}

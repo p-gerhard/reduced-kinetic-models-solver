@@ -8,7 +8,7 @@
 
 #include <maths/rational.cl>
 
-#define USE_QUAD_LEBEDEV_ORDER_7
+#define USE_QUAD_LEBEDEV_ORDER_41
 #include <maths/quad_lebedev.cl>
 
 __constant static const float chi_p[7] = { 0.333333397667f, -1.312060956673f,

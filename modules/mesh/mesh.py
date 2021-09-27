@@ -27,12 +27,15 @@ class MeshStructured:
         self.filename = filename
         assert dim in [2, 3]
         self.dim = dim
-        self.elem_data = None
 
+        self.elem_data = None
+        is_2d = False
+        
         # Load proper cell type according to the physical dimension
         if self.dim == 2:
+            is_2d = True
             self.cell_name = "quad"
-            self.elem_data == Q4_ELEM
+            self.elem_data = Q4_ELEM
 
         if self.dim == 3:
             self.cell_name = "hexahedron"
@@ -72,8 +75,11 @@ class MeshStructured:
             )
             self.nodes = np.asarray(self.mesh.points, dtype=np.float32)
 
+            if is_2d:
+                self.nodes = np.delete(self.nodes, 2, 1)
+
             self.nb_nodes, phy_dim_point = self.nodes.shape
-            assert phy_dim_point == 3
+            assert phy_dim_point == self.dim
 
             self.nb_cells, nb_loc_node = self.cells.shape
             assert nb_loc_node == self.elem_data["NODE_PER_ELEM"]
@@ -82,46 +88,57 @@ class MeshStructured:
             self.cells = np.ravel(self.cells, order="C")
             self.points = np.ravel(self.nodes, order="C")
 
-            self.cells_center = np.empty(3 * self.nb_cells, dtype=np.float32)
+            self.cells_center = np.empty(self.dim * self.nb_cells, dtype=np.float32)
             size_elem2elem = self.elem_data["FACE_PER_ELEM"] * self.nb_cells
             self.elem2elem = np.full(size_elem2elem, -1, dtype=np.int64)
-            self.cell_size = np.zeros(3, dtype=np.float32)
+            self.cell_size = np.zeros(self.dim, dtype=np.float32)
 
             start = time.time()
-            extract_cell_size(self.nodes, self.cells, self.cell_size)
+            extract_cell_size(self.nodes, self.cells, self.cell_size, is_2d)
             duration = time.time() - start
 
             logger.info("{:<30}: {:>6.8f} sec.".format("Sizes extracted in", duration))
-            logger.info("{:<30}: {:>6.8f}".format("Size dx", self.cell_size[0]))
-            logger.info("{:<30}: {:>6.8f}".format("Size dy", self.cell_size[1]))
-            logger.info("{:<30}: {:>6.8f}".format("Size dz", self.cell_size[2]))
 
-            self.dx = self.cell_size[0]
-            self.dy = self.cell_size[1]
-            self.dz = self.cell_size[2]
+            self.dx = np.float32(self.cell_size[0])
+            logger.info("{:<30}: {:>6.8f}".format("Size dx", self.cell_size[0]))
+            
+            self.dy = np.float32(self.cell_size[1])
+            logger.info("{:<30}: {:>6.8f}".format("Size dy", self.cell_size[1]))
+
+
+            if is_2d :
+                 self.dz = np.float32(0.)
+            else :
+                self.dz = np.float32(self.cell_size[2])
+                logger.info("{:<30}: {:>6.8f}".format("Size dz", self.cell_size[2]))
 
             start = time.time()
             process_cells(
-                self.nb_cells, self.cell_size, self.nodes, self.cells, self.cells_center
+                self.nb_cells,
+                self.cell_size,
+                self.nodes,
+                self.cells,
+                self.cells_center,
+                is_2d,
             )
 
             duration = time.time() - start
             logger.info("{:<30}: {:>6.8f} sec.".format("Cells proceeded in", duration))
             start = time.time()
 
-            process_nodes(self.nb_nodes, self.cell_size, self.nodes)
+            process_nodes(self.nb_nodes, self.cell_size, self.nodes, is_2d)
             duration = time.time() - start
             logger.info("{:<30}: {:>6.8f} sec.".format("Nodes proceeded in", duration))
             start = time.time()
 
-            build_elem2elem(self.nb_cells, self.cells, self.elem2elem)
+            build_elem2elem(self.nb_cells, self.cells, self.elem2elem, is_2d)
             duration = time.time() - start
             logger.info(
                 "{:<30}: {:>6.8f} sec.".format("Connectivity built in", duration)
             )
 
             start = time.time()
-            check_elem2elem(self.nb_cells, self.elem2elem)
+            check_elem2elem(self.nb_cells, self.elem2elem, is_2d)
             duration = time.time() - start
             logger.info(
                 "{:<30}: {:>6.8f} sec.".format("Connectivity checked in", duration)

@@ -18,9 +18,9 @@ Q4_ELEM = {
     "NODE_PER_ELEM": 4,
     "NODE_PER_FACE": 2,
     "FACE_TO_LOC_NODE": [
-        [1, 1],  # Right
-        [0, 3],  # Left
-        [3, 2],  # North
+        [1, 2],  # Right
+        [3, 0],  # Left
+        [2, 3],  # North
         [0, 1],  # South
     ],
     "GMSH_REF_NODE_COORD": [
@@ -48,10 +48,6 @@ Q4_ELEM = {
 #     4----------5
 
 
-
-
-
-
 H8_ELEM = {
     "ELEM_CODE": 5,
     "PHY_DIM": 3,
@@ -59,12 +55,12 @@ H8_ELEM = {
     "NODE_PER_ELEM": 8,
     "NODE_PER_FACE": 4,
     "FACE_TO_LOC_NODE": [
-        [5, 1, 6, 2],  # Right
-        [4, 7, 0, 3],  # Left
-        [6, 2, 7, 3],  # Front
-        [4, 0, 5, 1],  # Back
-        [4, 5, 7, 6],  # North
-        [0, 3, 1, 2],  # South
+        [1, 2, 6, 5],  # Right
+        [0, 4, 7, 3],  # Left
+        [2, 3, 7, 6],  # Front
+        [1, 5, 4, 0],  # Back
+        [4, 5, 6, 7],  # North
+        [0, 3, 2, 1],  # South
     ],
     "GMSH_REF_NODE_COORD": [
         (0.0, 0.0, 0.0),

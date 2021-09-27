@@ -1,17 +1,18 @@
 #ifndef SOLVER_3D_CL
 #define SOLVER_3D_CL
 
-// #define USE_MUSCL
-
-#ifdef IS_2D
-#define DIM 2
+#if DIM == 2
+#define IS_2D
+#define VOL (DX * DY)
 #define FACE_PER_ELEM 4
-#else
-#define DIM 3
+#elif DIM == 3
+#define VOL (DX * DY * DZ)
 #define FACE_PER_ELEM 6
 #endif
 
+#ifdef USE_MUSCL
 #include "muscl.cl"
+#endif
 
 void vf_source(const float x[DIM], const float wn[M], const float t,
 			   float s[M]);

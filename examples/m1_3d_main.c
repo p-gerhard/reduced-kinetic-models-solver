@@ -93,8 +93,8 @@ void vf_source(const float x[DIM], const float wn[M], const float t, float s[M])
 void vf_num_flux(const float wL[M], const float wR[M], const float vn[DIM],
 				 float flux[M])
 {
-	// m1_num_flux_rusanov(wL, wR, vn, flux);
-	m1_num_flux_kinetic_lebedev(wL, wR, vn, flux);
+	m1_num_flux_rusanov(wL, wR, vn, flux);
+	// m1_num_flux_kinetic_lebedev(wL, wR, vn, flux);
 }
 
 void vf_num_flux_boundary(const float wL[M], const float wR[M],
