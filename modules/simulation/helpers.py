@@ -15,6 +15,86 @@ import time
 import numpy as np
 
 
+def pprint_dict(dict, indent=0):
+    indent = 5
+    for k, v in sorted(dict.items()):
+        if is_num_type(v):
+            if np.issubdtype(type(v), np.integer):
+                print(indent * "\t" + "- {:<20} {:<12d}".format(k, v))
+            if np.issubdtype(type(v), np.inexact):
+                print(indent * "\t" + "- {:<20} {:<12.6f}".format(k, v))
+
+        else:
+            print(indent * "\t" + "- {:<20} {}".format(k, v))
+
+
+
+def make_folder_empty(folder):
+        try:
+            os.mkdir(folder)
+        except:
+            pass
+
+        for filename in os.listdir(folder):
+            file_path = os.path.join(folder, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                print('Failed to delete {}. Reason: {}'.format(file_path, e))
+ 
+
+def check_inclusion_and_type(input_param, ref_param, msg_header=""):
+    is_missing = False
+
+    for key, value in ref_param.items():
+        # Check inclusion
+        if key not in input_param.keys():
+            if msg_header != "":
+                error_msg = '{} "{} is missing'.format(msg_header, key)
+            else:
+                error_msg = 'Parameter "{} is missing'.format(msg_header, key)
+
+            logger.error(error_msg)
+            is_missing = True
+
+        # Check type and try to cast if possible
+        else:
+            if not isinstance(input_param[key], ref_param[key]):
+                try:
+                    input_param[key] = ref_param[key](input_param[key])
+                except:
+                    if msg_header != "":
+                        logger.error(
+                            '{msg} "{k}" of type {t_in} cannot be cast into {t_ref} !'.format(
+                                msg=msg_header,
+                                k=key,
+                                t_in=type(input_param[key]),
+                                t_ref=ref_param[key],
+                            )
+                        )
+                    else:
+                        logger.error(
+                            'Parameter "{k}" of type {t_in} into {t_ref}'.format(
+                                k=key, t_in=type(input_param[key]), t_ref=ref_param[key]
+                            )
+                        )
+                    is_missing = True
+
+    if is_missing:
+        logger.error("Required values are : {}".format(list(ref_param)))
+
+    else:
+        if msg_header != "":
+            info_msg = "{:<30}: OK".format("{} ".format(msg_header))
+        else:
+            info_msg = "{:<30}: OK".format("Parameters")
+
+        logger.info(info_msg)
+
+    return not is_missing
+
+
 def compute_dt(dim, cfl, dx, dy, dz):
 
     if dim == 2:
@@ -24,6 +104,7 @@ def compute_dt(dim, cfl, dx, dy, dz):
         dt = cfl * (dx * dy * dz) / (2.0 * (dx * dy + dy * dz + dz * dx))
 
     return dt
+
 
 def check_inclusion(input_param, ref_param, msg_header=""):
     is_missing = False
@@ -35,15 +116,16 @@ def check_inclusion(input_param, ref_param, msg_header=""):
     for p in input_param:
         if p not in ref_param:
             if msg_header != "":
-                error_msg = '{} "{} is missing !'.format(msg_header, p)
+                error_msg = '{} "{} is missing'.format(msg_header, p)
             else:
-                error_msg = 'Parameter "{} is missing !'.format(msg_header, p)
+                error_msg = 'Parameter "{} is missing'.format(msg_header, p)
 
             logger.error(error_msg)
-            logger.error("Required values are : {}".format(list(ref_param)))
             is_missing = True
 
-    if not is_missing:
+    if is_missing:
+        logger.error("Required values are : {}".format(list(ref_param)))
+    else:
         if msg_header != "":
             info_msg = "{:<30}: OK".format("{} ".format(msg_header))
         else:
@@ -79,36 +161,3 @@ def get_ite_title(ite, t, elapsed):
 
 def is_num_type(val):
     return np.issubdtype(type(val), np.number)
-
-
-def safe_assign(key, val, type_to_check):
-
-    if type_to_check == int:
-        if is_num_type(val):
-            return int(val)
-        else:
-            raise TypeError("{} must be numeric".format(key))
-
-    if type_to_check == float:
-        if is_num_type(val):
-            return float(val)
-        else:
-            raise TypeError("{} must be numeric".format(key))
-
-    if type_to_check == str:
-        if isinstance(val, str):
-            return val
-        else:
-            raise TypeError("{} must be str".format(key))
-
-    if type_to_check == list:
-        if isinstance(val, list):
-            return val
-        else:
-            raise TypeError("{} must be list".format(key))
-
-    if type_to_check == bool:
-        if isinstance(val, bool):
-            return val
-        else:
-            raise TypeError("{} must be list".format(key))

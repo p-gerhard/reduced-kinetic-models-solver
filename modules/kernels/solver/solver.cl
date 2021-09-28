@@ -1,5 +1,5 @@
-#ifndef SOLVER_3D_CL
-#define SOLVER_3D_CL
+#ifndef SOLVER_CL
+#define SOLVER_CL
 
 #if DIM == 2
 #define IS_2D

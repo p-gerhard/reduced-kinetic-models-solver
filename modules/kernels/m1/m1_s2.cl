@@ -1,15 +1,21 @@
 #ifndef M1_S2_CL
 #define M1_S2_CL
 
-#pragma once
-
 #define M1_MAX_KAPPA_SIMPLE 40.F
 #define M1_TOL_R 1E-8F
 
-#include <maths/rational.cl>
-
-#define USE_QUAD_LEBEDEV_ORDER_41
+#ifdef USE_QUAD_LEBEDEV
+#undef USE_QUAD_TRIGAUSS
+#define USE_QUAD_LEBEDEV_NB_V_230
 #include <maths/quad_lebedev.cl>
+#endif
+
+#ifdef USE_QUAD_TRIGAUSS
+#undef USE_QUAD_LEBEDEV
+#include <maths/quad_trigauss.cl>
+#endif
+
+#include <maths/rational.cl>
 
 __constant static const float chi_p[7] = { 0.333333397667f, -1.312060956673f,
 										   2.271654209855f, -2.514343153802f,
@@ -20,6 +26,11 @@ __constant static const float chi_q[7] = { 1.000000000000f,	 -3.936171252072f,
 										   5.614892442165f,	 -2.820874826409f,
 										   -0.780269390244f, 1.253825802778f,
 										   -0.327086152123f };
+
+static float get_chi_interp(const float r)
+{
+	return evaluate_rational_simple(chi_p, chi_q, 7, r);
+}
 
 static float get_r(const float rho, const float In)
 {
@@ -59,11 +70,6 @@ static float get_r(const float rho, const float In)
 // 	}
 // 	return r;
 // }
-
-static float get_chi_interp(const float r)
-{
-	return evaluate_rational_simple(chi_p, chi_q, 7, r);
-}
 
 static void get_kappa(const float wn[4], float k[3], float *k_norm)
 {
@@ -107,35 +113,30 @@ static float get_a(const float rho, const float k_norm)
 
 static void phy_flux(const float wn[4], const float vn[3], float flux[4])
 {
-	const float rho = wn[0];
-	const float Ix = wn[1];
-	const float Iy = wn[2];
-	const float Iz = wn[3];
-
-	float3 I = (float3)(Ix, Iy, Iz);
+	float3 I = (float3)(wn[1], wn[2], wn[3]);
 
 	/* Normalized intensity vector In */
-	float3 In = normalize(I);
 	const float intensity_norm = length(I);
+	float3 In = normalize(I);
 
 	/* Get closure value */
-	const float r = get_r(rho, intensity_norm);
+	const float r = get_r(wn[0], intensity_norm);
 	const float chi = get_chi_interp(r);
 
 	const float t1 = 0.5f * (1.f - chi);
 	const float t2 = 0.5f * (3.f * chi - 1.f);
 
 	/* Diagonal terms */
-	const float Pxx = rho * (t1 + t2 * In.x * In.x);
-	const float Pyy = rho * (t1 + t2 * In.y * In.y);
-	const float Pzz = rho * (t1 + t2 * In.z * In.z);
+	const float Pxx = wn[0] * (t1 + t2 * In.x * In.x);
+	const float Pyy = wn[0] * (t1 + t2 * In.y * In.y);
+	const float Pzz = wn[0] * (t1 + t2 * In.z * In.z);
 
 	/* Off diagonal terms : Pxy = Pyz, Pxz = Pzx, Pyz = Pzy */
-	const float Pxy = rho * t2 * In.x * In.y;
-	const float Pxz = rho * t2 * In.x * In.z;
-	const float Pyz = rho * t2 * In.y * In.z;
+	const float Pxy = wn[0] * t2 * In.x * In.y;
+	const float Pxz = wn[0] * t2 * In.x * In.z;
+	const float Pyz = wn[0] * t2 * In.y * In.z;
 
-	flux[0] = Ix * vn[0] + Iy * vn[1] + Iz * vn[2];
+	flux[0] = wn[1] * vn[0] + wn[2] * vn[1] + wn[3] * vn[2];
 	flux[1] = Pxx * vn[0] + Pxy * vn[1] + Pxz * vn[2];
 	flux[2] = Pxy * vn[0] + Pyy * vn[1] + Pyz * vn[2];
 	flux[3] = Pxz * vn[0] + Pyz * vn[1] + Pzz * vn[2];
@@ -157,15 +158,13 @@ void m1_num_flux_rusanov(const float wL[4], const float wR[4],
 	flux[3] = 0.5f * ((fL[3] + fR[3]) - lambda * (wR[3] - wL[3]));
 }
 
-static void m1_num_flux_kinetic_lebedev(const float wL[4], const float wR[4],
-										const float vn[3], float flux[4])
+#ifdef USE_KINETIC_NUM_FLUX
+static void m1_num_flux_kinetic(const float wL[4], const float wR[4],
+								const float vn[3], float flux[4])
 {
-	float wi, vx, vy, vz, t, v_dot_n;
-	float kLn, kRn, wifLvn, wifRvn;
-
+	float kLn, kRn;
 	float kL[3];
 	float kR[3];
-
 
 	get_kappa(wL, kL, &kLn);
 	get_kappa(wR, kR, &kRn);
@@ -180,25 +179,30 @@ static void m1_num_flux_kinetic_lebedev(const float wL[4], const float wR[4],
 	flux[1] = 0.f;
 	flux[2] = 0.f;
 	flux[3] = 0.f;
-	
-	for (int iv = 0; iv < LEBEDEV_ORDER_N; iv++) {
-		vx = quad_leb_vi[3 * iv + 0];
-		vy = quad_leb_vi[3 * iv + 1];
-		vz = quad_leb_vi[3 * iv + 2];
-		wi = quad_leb_wi[iv];
 
-		v_dot_n = vx * vn[0] + vy * vn[1] + vz * vn[2];
+	for (int iv = 0; iv < QUAD_NB_V; iv++) {
+		float vx = quad_vi[3 * iv + 0];
+		float vy = quad_vi[3 * iv + 1];
+		float vz = quad_vi[3 * iv + 2];
+#ifdef USE_QUAD_TRIGAUSS
+		float wi = quad_wi[iv] / (4 * M_PI);
+#else
+		float wi = quad_wi[iv];
+#endif
+		float v_dot_n = vx * vn[0] + vy * vn[1] + vz * vn[2];
 
 		if (v_dot_n > 0.f) {
-			t = kL[0] * vx + kL[1] * vy + kL[2] * vz;
-			wifLvn = wi * aL * exp(t) * v_dot_n;
+			float tL = kL[0] * vx + kL[1] * vy + kL[2] * vz;
+			float wifLvn = wi * aL * exp(tL) * v_dot_n;
+
 			flux[0] += wifLvn;
 			flux[1] += wifLvn * vx;
 			flux[2] += wifLvn * vy;
 			flux[3] += wifLvn * vz;
 		} else {
-			t = kR[0] * vx + kR[1] * vy + kR[2] * vz;
-			wifRvn = wi * aR * exp(t) * v_dot_n;
+			float tR = kR[0] * vx + kR[1] * vy + kR[2] * vz;
+			float wifRvn = wi * aR * exp(tR) * v_dot_n;
+
 			flux[0] += wifRvn;
 			flux[1] += wifRvn * vx;
 			flux[2] += wifRvn * vy;
@@ -206,5 +210,6 @@ static void m1_num_flux_kinetic_lebedev(const float wL[4], const float wR[4],
 		}
 	}
 }
+#endif
 
 #endif

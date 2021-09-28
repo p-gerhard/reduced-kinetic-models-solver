@@ -1,21 +1,6 @@
 #ifndef MUSCL_CL
 #define MUSCL_CL
 
-// static float get_r_2(const float rho, const float In)
-// {
-// 	float r;
-
-// 	if (In < rho) {
-// 		r = In / rho;
-
-// 	} else {
-// 		printf("WARNING RATIO \n");
-// 		r = 0.98f;
-// 	}
-
-// 	return r;
-// }
-
 static void muscl_reconstruct(const __global float *wn, const long id_cell,
 							  const long id_neighbour, const float vn[DIM],
 							  const float sL[DIM][M], const float sR[DIM][M],

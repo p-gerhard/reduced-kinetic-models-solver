@@ -12,7 +12,6 @@
 #define DT _dt_
 #define NGRID _ngrid_
 
-
 /* User model parameters */
 #define SIGMA _sigma_
 #define ALPHA _alpha_
@@ -24,7 +23,7 @@
 #define SRC_R _src_r_
 #define SRC_V _src_v_
 
-#include <solver/solver_3d.cl>
+#include <solver/solver.cl>
 
 #if defined(USE_QUAD_UNIFORM) && DIM == 2
 #if M == 4
@@ -220,7 +219,6 @@ static void sn_src_circle(const float x[DIM], const float t, float wn[M])
 #ifdef IS_2D
 	const float d =
 		(x[0] - SRC_X) * (x[0] - SRC_X) + (x[1] - SRC_Y) * (x[1] - SRC_Y);
-
 #else
 	const float d = (x[0] - SRC_X) * (x[0] - SRC_X) +
 					(x[1] - SRC_Y) * (x[1] - SRC_Y) +

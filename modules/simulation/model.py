@@ -38,8 +38,20 @@ ORDINATES_MODELS = {
 }
 
 MOMENTS_MODELS = {
-    "2d_s1": {"type": "moments", "dim": 2, "order": [1]},
-    "3d_s2": {"type": "moments", "dim": 3, "order": [1]},
+    "2d_s1": {
+        "type": "moments",
+        "dim": 2,
+        "order": [1],
+        "src_file": "m1/m1.cl",
+        "ocl_options": ["-D USE_M1_S1_CLOSURE", "-D IS_MOMENT_MODEL"],
+    },
+    "3d_s2": {
+        "type": "moments",
+        "dim": 3,
+        "order": [1],
+        "src_file": "m1/m1.cl",
+        "ocl_options": ["-D USE_M1_S2_CLOSURE", "-D IS_MOMENT_MODEL"],
+    },
 }
 
 IMPLEMENTED_MODELS = {"ordinates": ORDINATES_MODELS, "moments": MOMENTS_MODELS}
@@ -51,9 +63,15 @@ def get_model_parameters(model_type, model_name, model_order):
     dim = IMPLEMENTED_MODELS[model_type][model_name]["dim"]
     src_file = IMPLEMENTED_MODELS[model_type][model_name]["src_file"]
     src_file = os.path.abspath(os.path.join("../modules/kernels/", src_file))
+    nb_macro_to_reconstruct = 0
 
     if model_type == "ordinates":
         m = model_order
+        if dim == 2:
+            nb_macro_to_reconstruct = 3
+
+        else:
+            nb_macro_to_reconstruct = 4
 
     if model_type == "moments":
         if dim == 2:
@@ -61,7 +79,13 @@ def get_model_parameters(model_type, model_name, model_order):
         else:
             m = 4
 
-    return np.int32(m), np.int32(dim), src_file, ocl_options
+    return (
+        np.int32(m),
+        np.int32(nb_macro_to_reconstruct),
+        np.int32(dim),
+        src_file,
+        ocl_options,
+    )
 
 
 def get_model_ocl_options(model_type, model_name):

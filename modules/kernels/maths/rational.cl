@@ -1,7 +1,5 @@
-#ifndef MATHS_RATIONAL_CL
-#define MATHS_RATIONAL_CL
-
-#include "rational.h"
+#ifndef RATIONAL_CL
+#define RATIONAL_CL
 
 float evaluate_polynomial_simple(__constant const float *p, const int n,
 								 const float x)

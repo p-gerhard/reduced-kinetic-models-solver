@@ -1,8 +1,6 @@
 #ifndef MODEL_M1_S1_SIMPLE_CL
 #define MODEL_M1_S1_SIMPLE_CL
 
-#pragma once
-
 #include "bessel_i.cl"
 #include "rational.cl"
 #include "quad_circle_uniform.cl"
@@ -13,18 +11,18 @@
 #define VACCUM 1E-4F
 
 __constant static const float chi_p[7] = { 0.500000947627, -1.944182261747,
-																					 2.930698162883, -2.177908221701,
-																					 0.921417673004, -0.311258505782,
-																					 0.081997371844 };
+										   2.930698162883, -2.177908221701,
+										   0.921417673004, -0.311258505782,
+										   0.081997371844 };
 
 __constant static const float chi_q[7] = { 1.000000000000,	-3.888203179227,
-																					 5.358815439044,	-2.394912664257,
-																					 -1.057275075050, 1.306311165212,
-																					 -0.323970518048 };
+										   5.358815439044,	-2.394912664257,
+										   -1.057275075050, 1.306311165212,
+										   -0.323970518048 };
 
 __constant static const float log_bessel_i0_p[7] = {
 	0.722493563857652, -1.369083176985558, 1.076125440349176, 0.336568032124439,
-	0.018918132550194, 0.000278937058459,	 0.000000916466550
+	0.018918132550194, 0.000278937058459,  0.000000916466550
 };
 
 __constant static const float log_bessel_i0_q[7] = {
@@ -43,13 +41,13 @@ inline static float get_angle_non_normalized(const float u[2])
 	/* Return the angle between a vector u and e_x = [1, 0] */
 	const float u_norm = sqrt(u[0] * u[0] + u[1] * u[1]);
 	if (isless(u_norm, 1e-8f)) {
-		return 0;
+		return 0.f;
 	}
 	return atan2(u[1] / u_norm, u[0] / u_norm) - atan2(0.f, 1.f);
 }
 
 static void flux_int(const float x, const float kn, const float log_i0,
-										 const float th_k, const float th_n, float res[3])
+					 const float th_k, const float th_n, float res[3])
 {
 	const float t0 = kn * cos(x - th_k) - log_i0;
 	const float t1 = cos(x - th_n);
@@ -61,7 +59,7 @@ static void flux_int(const float x, const float kn, const float log_i0,
 }
 
 static void flux_integrand(float theta, const float kn, const float log_i0,
-													 const float th_k, const float th_n, float value[3])
+						   const float th_k, const float th_n, float value[3])
 {
 	const float t0 = kn * cos(theta - th_k) - log_i0;
 	const float t1 = cos(theta - th_n);
@@ -129,7 +127,7 @@ static void get_kappa(const float *w, float *k, float *k_norm)
 }
 
 inline static void get_kappa_specular(const float *kL, const float *vn,
-																			float *kR)
+									  float *kR)
 {
 	/* Construct kR according to the specular law */
 	const float kL_dot_vn = kL[0] * vn[0] + kL[1] * vn[1];
@@ -187,7 +185,7 @@ static void phy_flux(const float *w, const float *vn, float *flux)
 /* Numerical fluxes */
 
 void m1_s1_num_flux_rusanov(const float *wL, const float *wR, const float *vn,
-														float *flux)
+							float *flux)
 {
 	float fL[3];
 	float fR[3];
@@ -202,7 +200,7 @@ void m1_s1_num_flux_rusanov(const float *wL, const float *wR, const float *vn,
 }
 
 void m1_s1_num_flux_kin(const float *wL, const float *wR, const float *vn,
-												float *flux)
+						float *flux)
 {
 	float vx, vy, t, v_dot_n;
 	float rhoL, rhoR, kLn, kRn, wifLvn, wifRvn;
@@ -249,7 +247,7 @@ void m1_s1_num_flux_kin(const float *wL, const float *wR, const float *vn,
 }
 
 void m1_s1_num_flux_kin_simpson3(const float *wL, const float *wR,
-																 const float *vn, float *flux)
+								 const float *vn, float *flux)
 {
 	float kLn, kRn, th;
 	float kL[2], kR[2];
@@ -326,7 +324,7 @@ void m1_s1_num_flux_kin_simpson3(const float *wL, const float *wR,
 }
 
 void m1_s1_num_flux_boundary_kin_2(const float *wL, const float *wR,
-																	 const float *vn, float *flux)
+								   const float *vn, float *flux)
 
 {
 	float kn, th;
@@ -405,7 +403,7 @@ void m1_s1_num_flux_boundary_kin_2(const float *wL, const float *wR,
 }
 
 void m1_s1_num_flux_boundary_kin(const float *wL, const float *wR,
-																 const float *vn, float *flux)
+								 const float *vn, float *flux)
 {
 	float kn, vx, vy, t, v_dot_n, wifLvn, wifRvn;
 	float sum_vn, int_fL;
@@ -494,7 +492,7 @@ void m1_s1_num_flux_boundary_kin(const float *wL, const float *wR,
 }
 
 void m1_s1_num_flux_kinetic_tanh_sinh(const float *wL, const float *wR,
-																			const float *vn, float *flux)
+									  const float *vn, float *flux)
 {
 	/* Get cell parameters */
 	float kLn, kRn, th, kL[2], kR[2];
@@ -521,13 +519,15 @@ void m1_s1_num_flux_kinetic_tanh_sinh(const float *wL, const float *wR,
 
 	/* Level 0*/
 	/* Left cell */
-	flux_int(th_minL + cL * tanh_sinh_node[0], kLn, log_i0_L, th_kL, th_n, val_a);
+	flux_int(th_minL + cL * tanh_sinh_node[0], kLn, log_i0_L, th_kL, th_n,
+			 val_a);
 	fluxL[0] = tanh_sinh_weight[0] * val_a[0];
 	fluxL[1] = tanh_sinh_weight[0] * val_a[1];
 	fluxL[2] = tanh_sinh_weight[0] * val_a[2];
 
 	/* Right cell */
-	flux_int(th_minR + cR * tanh_sinh_node[0], kRn, log_i0_R, th_kR, th_n, val_a);
+	flux_int(th_minR + cR * tanh_sinh_node[0], kRn, log_i0_R, th_kR, th_n,
+			 val_a);
 	fluxR[0] = tanh_sinh_weight[0] * val_a[0];
 	fluxR[1] = tanh_sinh_weight[0] * val_a[1];
 	fluxR[2] = tanh_sinh_weight[0] * val_a[2];
@@ -547,20 +547,20 @@ void m1_s1_num_flux_kinetic_tanh_sinh(const float *wL, const float *wR,
 
 		for (int i = id_min; i < id_max; i++) {
 			/* Left cell */
-			flux_int(th_minL + cL * tanh_sinh_node[i], kLn, log_i0_L, th_kL, th_n,
-							 val_a);
-			flux_int(th_maxL - cL * tanh_sinh_node[i], kLn, log_i0_L, th_kL, th_n,
-							 val_b);
+			flux_int(th_minL + cL * tanh_sinh_node[i], kLn, log_i0_L, th_kL,
+					 th_n, val_a);
+			flux_int(th_maxL - cL * tanh_sinh_node[i], kLn, log_i0_L, th_kL,
+					 th_n, val_b);
 
 			IL[0] += tanh_sinh_weight[i] * (val_a[0] + val_b[0]);
 			IL[1] += tanh_sinh_weight[i] * (val_a[1] + val_b[1]);
 			IL[2] += tanh_sinh_weight[i] * (val_a[2] + val_b[2]);
 
 			/* Right cell */
-			flux_int(th_minR + cR * tanh_sinh_node[i], kRn, log_i0_R, th_kR, th_n,
-							 val_a);
-			flux_int(th_maxR - cR * tanh_sinh_node[i], kRn, log_i0_R, th_kR, th_n,
-							 val_b);
+			flux_int(th_minR + cR * tanh_sinh_node[i], kRn, log_i0_R, th_kR,
+					 th_n, val_a);
+			flux_int(th_maxR - cR * tanh_sinh_node[i], kRn, log_i0_R, th_kR,
+					 th_n, val_b);
 
 			IR[0] += tanh_sinh_weight[i] * (val_a[0] + val_b[0]);
 			IR[1] += tanh_sinh_weight[i] * (val_a[1] + val_b[1]);
@@ -583,7 +583,7 @@ void m1_s1_num_flux_kinetic_tanh_sinh(const float *wL, const float *wR,
 }
 
 void m1_s1_num_flux_boundary_kinetic_tanh_sinh(const float *wL, const float *wR,
-																							 const float *vn, float *flux)
+											   const float *vn, float *flux)
 {
 	/* Get cell parameters */
 	float kn, kL[2], kR[2];
@@ -597,22 +597,15 @@ void m1_s1_num_flux_boundary_kinetic_tanh_sinh(const float *wL, const float *wR,
 
 	const float log_i0 = get_log_bessel_i0(kn);
 
-		/* TEST */
+	/* TEST */
 	// float kL_dot_v_1 = kL[0] * cos(tanh_sinh_node[1]) + kL[1] *  sin(tanh_sinh_node[1]);
 	// float kL_dot_v_2 = kn * cos(tanh_sinh_node[1] - th_kL);
-	
-  // float n_dot_v_1 = vn[0] * cos(tanh_sinh_node[1]) + vn[1] *  sin(tanh_sinh_node[1]);
+
+	// float n_dot_v_1 = vn[0] * cos(tanh_sinh_node[1]) + vn[1] *  sin(tanh_sinh_node[1]);
 	// float n_dot_v_2 = cos(tanh_sinh_node[1] - th_n);
 
-	
-	
 	// printf("k.v = %f, %f, %f\n",kL_dot_v_1, kL_dot_v_2, kL_dot_v_1 - kL_dot_v_2);
 	// printf("n/v = %f, %f, %f\n",n_dot_v_1, n_dot_v_2, n_dot_v_1 - n_dot_v_2);
-
-
-
-
-
 
 	float val_a[3], val_b[3], fluxL[3], fluxR[3], IL[3], IR[3];
 	/* Integration limits */
@@ -653,9 +646,9 @@ void m1_s1_num_flux_boundary_kinetic_tanh_sinh(const float *wL, const float *wR,
 		for (int i = id_min; i < id_max; i++) {
 			/* Left cell */
 			flux_int(th_minL + cL * tanh_sinh_node[i], kn, log_i0, th_kL, th_n,
-							 val_a);
+					 val_a);
 			flux_int(th_maxL - cL * tanh_sinh_node[i], kn, log_i0, th_kL, th_n,
-							 val_b);
+					 val_b);
 
 			IL[0] += tanh_sinh_weight[i] * (val_a[0] + val_b[0]);
 			IL[1] += tanh_sinh_weight[i] * (val_a[1] + val_b[1]);
@@ -663,9 +656,9 @@ void m1_s1_num_flux_boundary_kinetic_tanh_sinh(const float *wL, const float *wR,
 
 			/* Right cell */
 			flux_int(th_minR + cR * tanh_sinh_node[i], kn, log_i0, th_kR, th_n,
-							 val_a);
+					 val_a);
 			flux_int(th_maxR - cR * tanh_sinh_node[i], kn, log_i0, th_kR, th_n,
-							 val_b);
+					 val_b);
 
 			IR[0] += tanh_sinh_weight[i] * (val_a[0] + val_b[0]);
 			IR[1] += tanh_sinh_weight[i] * (val_a[1] + val_b[1]);
@@ -682,9 +675,12 @@ void m1_s1_num_flux_boundary_kinetic_tanh_sinh(const float *wL, const float *wR,
 		fluxR[2] = 0.5 * fluxR[2] + IR[2];
 	}
 
-	flux[0] = (cL * wL[0] * fluxL[0] + ALPHA * cR * wL[0] * fluxR[0]) / (2 * M_PI);
-	flux[1] = (cL * wL[0] * fluxL[1] + ALPHA * cR * wL[0] * fluxR[1]) / (2 * M_PI);
-	flux[2] = (cL * wL[0] * fluxL[2] + ALPHA * cR * wL[0] * fluxR[2]) / (2 * M_PI);
+	flux[0] =
+		(cL * wL[0] * fluxL[0] + ALPHA * cR * wL[0] * fluxR[0]) / (2 * M_PI);
+	flux[1] =
+		(cL * wL[0] * fluxL[1] + ALPHA * cR * wL[0] * fluxR[1]) / (2 * M_PI);
+	flux[2] =
+		(cL * wL[0] * fluxL[2] + ALPHA * cR * wL[0] * fluxR[2]) / (2 * M_PI);
 }
 
 void m1_s1_num_flux_fantom(float *wL, const float *vn, float *wR)
