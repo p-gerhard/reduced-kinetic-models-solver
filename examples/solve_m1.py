@@ -18,18 +18,17 @@ if __name__ == "__main__":
         "model_type": "moments",
         "model_name": "3d_s2",
         "model_order": 1,
-        "tmax": 0.20,
-        "cfl": 0.1,
+        "tmax": 20,
+        "cfl": 0.8,
         "use_muscl": False,
         "ocl_options": [
             "-cl-fast-relaxed-math",
             # "-D USE_KINETIC_NUM_FLUX",
-            # "-D USE_QUAD_TRIGAUSS",
-            # "-D USE_QUAD_TRIGAUSS_NB_V_272",
+            "-D USE_QUAD_LEBEDEV",
         ],
         "sigma": 0,
         "alpha": 1,  # 1 non-abs / 0 abs
-        "beta": 0.0,  # 0 spec.   / 1 diff.
+        "beta": 1,  # 0 spec.   / 1 diff.
         "src_toff": 10,
         "src_x": 0.5,
         "src_y": 0.5,

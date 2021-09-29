@@ -29,6 +29,11 @@
 #include <m1/m1_s1.cl>
 #endif
 
+#ifdef USE_KINETIC_NUM_FLUX_SPLIT
+#define USE_QUAD_TRIGAUSS
+#undef USE_QUAD_LEBEDEV
+#endif
+
 #ifdef USE_M1_S2_CLOSURE
 #undef USE_M1_S1_CLOSURE
 #include <m1/m1_s2.cl>
@@ -124,9 +129,32 @@ void vf_source(const float x[DIM], const float wn[M], const float t, float s[M])
 void vf_num_flux(const float wL[M], const float wR[M], const float vn[DIM],
 				 float flux[M])
 {
-
 #ifdef USE_KINETIC_NUM_FLUX
 	m1_num_flux_kinetic(wL, wR, vn, flux);
+#elif defined(USE_KINETIC_NUM_FLUX_SPLIT)
+	if (vn[0] == 1) {
+		m1_num_flux_RL(wL, wR, vn, flux);
+	}
+
+	if (vn[0] == -1) {
+		m1_num_flux_RL(wR, wL, vn, flux);
+	}
+
+	if (vn[1] == 1) {
+		m1_num_flux_FB(wL, wR, vn, flux);
+	}
+
+	if (vn[1] == -1) {
+		m1_num_flux_FB(wR, wL, vn, flux);
+	}
+
+	if (vn[2] == 1) {
+		m1_num_flux_NS(wL, wR, vn, flux);
+	}
+
+	if (vn[2] == -1) {
+		m1_num_flux_NS(wR, wL, vn, flux);
+	}
 #else
 	m1_num_flux_rusanov(wL, wR, vn, flux);
 #endif
@@ -136,6 +164,7 @@ void vf_num_flux_boundary(const float wL[M], const float wR[M],
 						  const float vn[DIM], float flux[M])
 {
 	vf_num_flux(wL, wL, vn, flux);
+	m1_num_flux_boundary(wL, wL, vn, flux);
 }
 
 #endif
