@@ -195,7 +195,7 @@ static void m1_num_flux_boundary(const float wL[4], const float wR[4],
 		if (v_dot_n > 0.f) {
 			float tL = kL[0] * vx + kL[1] * vy + kL[2] * vz;
 			float wifLvn = wi * a * exp(tL) * v_dot_n;
-			sum_vn += v_dot_n;
+			sum_vn += v_dot_n * wi;
 			int_fL += wifLvn;
 
 			flux[0] += wifLvn;
@@ -226,7 +226,7 @@ static void m1_num_flux_boundary(const float wL[4], const float wR[4],
 		float v_dot_n = vx * vn[0] + vy * vn[1] + vz * vn[2];
 
 		if (v_dot_n < 0.f) {
-			float wifRvn =  ALPHA * BETA * int_fL * v_dot_n;
+			float wifRvn = wi * ALPHA * BETA * int_fL * v_dot_n;
 			flux[0] += wifRvn;
 			flux[1] += wifRvn * vx;
 			flux[2] += wifRvn * vy;

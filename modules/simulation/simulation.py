@@ -145,7 +145,7 @@ class Simulation:
 
         return ocl_options
 
-    def __ocl_process_source(self, print_src=False):
+    def __ocl_process_source(self, print_src=True):
 
         with open(self.src_file, "r") as f:
             src = f.read()
@@ -314,7 +314,7 @@ class Simulation:
                 self.mesh.nodes, [(self.mesh.cell_name, self.mesh.cells)]
             )
             while self.t <= self.tmax:
-                if ite % 20 == 0:
+                if ite % 40 == 0:
                     self.__export_data(xdmf_writer)
 
                 kernel_euler_time_step(
@@ -353,5 +353,5 @@ class Simulation:
             )
         )
 
-        plt.plot(self.t_tab, self.w0_tot)
+        plt.plot(self.t_tab, self.w0_tot / np.max(self.w0_tot))
         plt.show()

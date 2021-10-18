@@ -46,11 +46,8 @@
 #include <maths/quad_uniform.cl>
 #endif
 
-
 #if defined(USE_QUAD_LEBEDEV) && DIM == 3
 #if M == 6
-#define USE_QUAD_LEBEDEV_NB_V_6
-#elif M == 6
 #define USE_QUAD_LEBEDEV_NB_V_6
 #elif M == 14
 #define USE_QUAD_LEBEDEV_NB_V_14
@@ -113,16 +110,8 @@ void sn_num_flux_upwind(const float wL[M], const float wR[M],
 void sn_num_flux_boundary(const float wL[M], const float wR[M],
 						  const float vn[DIM], float flux[M])
 {
-	float flux_spec = 0.f;
-	float flux_diff = 0.f;
-	float flux_out = 0.f;
-	float v_dot_n;
-	float w_sum = 0.f;
-
-#pragma unroll
-	for (int iw = 0; iw < M; iw++) {
-		flux[iw] = 0.f;
-	}
+	float sum_v_dot_n = 0.f;
+	float sum_flux_out = 0.f;
 
 	/* Compute outgoing flux */
 #pragma unroll
@@ -136,12 +125,15 @@ void sn_num_flux_boundary(const float wL[M], const float wR[M],
 							  vn[2] * quad_vi[DIM * iw + 2];
 #endif
 		if (v_dot_n > 0.f) {
-			flux_out += v_dot_n * wL[iw];
-			flux[iw] += v_dot_n * wL[iw];
+			flux[iw] = v_dot_n * wL[iw];
+			sum_flux_out += v_dot_n * wL[iw];;
+			sum_v_dot_n += v_dot_n;
 		} else {
-			w_sum -= v_dot_n;
+			flux[iw] = 0.f;
 		}
 	}
+
+	sum_flux_out = sum_flux_out / sum_v_dot_n;
 
 	/* Compute ingoing flux */
 #pragma unroll
@@ -155,19 +147,18 @@ void sn_num_flux_boundary(const float wL[M], const float wR[M],
 							  vn[2] * quad_vi[DIM * iw + 2];
 #endif
 		if (v_dot_n <= 0.f) {
-			flux_diff = flux_out * v_dot_n / w_sum;
-
 			/* Multiplication by the normal's component to avoid branching.
              * Assuming normal vector component is always 1 or 0.
              */
 #ifdef IS_2D
-			flux_spec = v_dot_n * wL[quad_spec[0][iw]] * fabs(vn[0]) +
-						v_dot_n * wL[quad_spec[1][iw]] * fabs(vn[1]);
+			float flux_spec = v_dot_n * wL[quad_spec[0][iw]] * fabs(vn[0]) +
+							  v_dot_n * wL[quad_spec[1][iw]] * fabs(vn[1]);
 #else
-			flux_spec = v_dot_n * wL[quad_spec[0][iw]] * fabs(vn[0]) +
-						v_dot_n * wL[quad_spec[1][iw]] * fabs(vn[1]) +
-						v_dot_n * wL[quad_spec[2][iw]] * fabs(vn[2]);
+			float flux_spec = v_dot_n * wL[quad_spec[0][iw]] * fabs(vn[0]) +
+							  v_dot_n * wL[quad_spec[1][iw]] * fabs(vn[1]) +
+							  v_dot_n * wL[quad_spec[2][iw]] * fabs(vn[2]);
 #endif
+			float flux_diff = sum_flux_out * v_dot_n;
 
 			flux[iw] += ALPHA * (BETA * flux_diff + (1.f - BETA) * flux_spec);
 		}
@@ -194,7 +185,7 @@ __kernel void sn_compute_macro(__global const float *wn,
 #ifdef IS_2D
 		w += QUAD_WI * wn[imem];
 #else
-		/* S2 Lebedev quadrature using quad_leb_wi */
+		/* S2 Lebedev quadrature using quad_wi */
 		w += quad_wi[iw] * wn[imem];
 #endif
 		Ix += w * quad_vi[DIM * iw + 0];
@@ -232,7 +223,7 @@ static void sn_src_circle(const float x[DIM], const float t, float wn[M])
 			}
 		} else {
 			for (int iw = 0; iw < M; iw++) {
-				wn[iw] = 1.f / SRC_V;
+				wn[iw] = 1.f / M;
 			}
 		}
 	} else {
@@ -256,7 +247,7 @@ void vf_source(const float x[DIM], const float wn[M], const float t, float s[M])
 {
 #pragma unroll
 	for (int iv = 0; iv < M; iv++) {
-		s[iv] = 0;
+		s[iv] = 0.f;
 	}
 }
 
