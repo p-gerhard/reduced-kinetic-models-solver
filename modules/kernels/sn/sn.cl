@@ -113,6 +113,7 @@ void sn_num_flux_boundary(const float wL[M], const float wR[M],
 	float sum_v_dot_n = 0.f;
 	float sum_flux_out = 0.f;
 
+	
 	/* Compute outgoing flux */
 #pragma unroll
 	for (int iw = 0; iw < M; iw++) {
@@ -124,16 +125,14 @@ void sn_num_flux_boundary(const float wL[M], const float wR[M],
 							  vn[1] * quad_vi[DIM * iw + 1] +
 							  vn[2] * quad_vi[DIM * iw + 2];
 #endif
-		if (v_dot_n > 0.f) {
+		if (v_dot_n > 0) {
 			flux[iw] = v_dot_n * wL[iw];
-			sum_flux_out += v_dot_n * wL[iw];;
-			sum_v_dot_n += v_dot_n;
+			sum_flux_out += quad_wi[iw] * v_dot_n * wL[iw];
+			sum_v_dot_n += v_dot_n * quad_wi[iw];
 		} else {
 			flux[iw] = 0.f;
 		}
 	}
-
-	sum_flux_out = sum_flux_out / sum_v_dot_n;
 
 	/* Compute ingoing flux */
 #pragma unroll
@@ -146,7 +145,7 @@ void sn_num_flux_boundary(const float wL[M], const float wR[M],
 							  vn[1] * quad_vi[DIM * iw + 1] +
 							  vn[2] * quad_vi[DIM * iw + 2];
 #endif
-		if (v_dot_n <= 0.f) {
+		if (v_dot_n < 0) {
 			/* Multiplication by the normal's component to avoid branching.
              * Assuming normal vector component is always 1 or 0.
              */
@@ -158,9 +157,9 @@ void sn_num_flux_boundary(const float wL[M], const float wR[M],
 							  v_dot_n * wL[quad_spec[1][iw]] * fabs(vn[1]) +
 							  v_dot_n * wL[quad_spec[2][iw]] * fabs(vn[2]);
 #endif
-			float flux_diff = sum_flux_out * v_dot_n;
+			float flux_diff = v_dot_n * sum_flux_out / sum_v_dot_n;
 
-			flux[iw] += ALPHA * (BETA * flux_diff + (1.f - BETA) * flux_spec);
+			flux[iw] = ALPHA * (BETA * flux_diff + (1.f - BETA) * flux_spec);
 		}
 	}
 }
@@ -223,7 +222,7 @@ static void sn_src_circle(const float x[DIM], const float t, float wn[M])
 			}
 		} else {
 			for (int iw = 0; iw < M; iw++) {
-				wn[iw] = 1.f / M;
+				wn[iw] = quad_wi[iw];
 			}
 		}
 	} else {

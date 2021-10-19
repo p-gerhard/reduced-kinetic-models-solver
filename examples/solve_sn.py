@@ -20,7 +20,7 @@ if __name__ == "__main__":
         "model_type": "ordinates",
         # "model_name": "2d_uniform",
         "model_name": "3d_lebedev",
-        "model_order": 50,
+        "model_order": 26,
         # "model_order": 64,
         "tmax": 1.5,
         "cfl": 1,
