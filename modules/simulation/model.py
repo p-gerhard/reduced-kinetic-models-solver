@@ -54,7 +54,29 @@ MOMENTS_MODELS = {
     },
 }
 
-IMPLEMENTED_MODELS = {"ordinates": ORDINATES_MODELS, "moments": MOMENTS_MODELS}
+SPHERICAL_HARMONICS_MODELS = {
+    "2d": {
+        "type": "spherical_harmonics",
+        "dim": 2,
+        "order": [1, 3, 5, 7, 9, 11],
+        "src_file": "pn/pn.cl",
+        "ocl_options": ["-D IS_SPHERICAL_HARMONICS_MODELS"],
+    },
+    "3d": {
+        "type": "spherical_harmonics",
+        "dim": 3,
+        "order": [1, 3, 5, 7, 9, 11],
+        "src_file": "pn/pn.cl",
+        "ocl_options": ["-D IS_SPHERICAL_HARMONICS_MODELS"],
+    },
+}
+
+
+IMPLEMENTED_MODELS = {
+    "ordinates": ORDINATES_MODELS,
+    "moments": MOMENTS_MODELS,
+    "spherical_harmonics": SPHERICAL_HARMONICS_MODELS,
+}
 
 
 def get_model_parameters(model_type, model_name, model_order):
@@ -78,6 +100,13 @@ def get_model_parameters(model_type, model_name, model_order):
             m = 3
         else:
             m = 4
+
+    if model_type == "spherical_harmonics":
+        if dim == 2:
+            m = (model_order * model_order / 2.0) + (3.0 * model_order / 2.0) + 1.0
+
+        else:
+            m = (model_order + 1.0) * (model_order + 1.0)
 
     return (
         np.int32(m),

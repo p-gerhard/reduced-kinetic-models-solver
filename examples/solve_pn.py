@@ -17,12 +17,10 @@ if __name__ == "__main__":
     r = 0.05
     v = (4.0 / 3.0) * np.pi * r * r * r
     parameters = {
-        "model_type": "ordinates",
-        # "model_name": "2d_uniform",
-        "model_name": "3d_lebedev",
-        "model_order": 50,
-        # "model_order": 64,
-        "tmax": 1.5,
+        "model_type": "spherical_harmonics",
+        "model_name": "3d",
+        "model_order": 3,
+        "tmax": 10,
         "cfl": 1,
         "use_muscl": True,
         "ocl_options" : ["-cl-fast-relaxed-math"],
