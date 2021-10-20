@@ -162,7 +162,7 @@ void pn_num_flux_kinetic_L(const float wL[10], const float wR[10],
 			  0.0264754426F * wR[8] - 0.307617188F * wR[9];
 }
 
-void pn_num_flux_kinetic_N(const float wL[10], const float wR[10],
+void pn_num_flux_kinetic_F(const float wL[10], const float wR[10],
 						   float flux[10])
 {
 	flux[0] = 0.250000089F * wL[0] + 0.2886751F * wL[1] -
@@ -211,7 +211,7 @@ void pn_num_flux_kinetic_N(const float wL[10], const float wR[10],
 			  0.0397132263F * wR[8] - 0.290527374F * wR[9];
 }
 
-void pn_num_flux_kinetic_S(const float wL[10], const float wR[10],
+void pn_num_flux_kinetic_B(const float wL[10], const float wR[10],
 						   float flux[10])
 {
 	flux[0] = 0.250000089F * wL[0] - 0.288675129F * wL[1] -
@@ -429,7 +429,7 @@ void pn_num_flux_boundary_kinetic_L(const float wL[10], float flux[10])
 			  x4 * (0.231454983F * beta - 0.231454983F);
 }
 
-void pn_num_flux_boundary_kinetic_N(const float wL[10], float flux[10])
+void pn_num_flux_boundary_kinetic_F(const float wL[10], float flux[10])
 {
 	const float alpha = ALPHA;
 	const float beta = BETA;
@@ -515,7 +515,7 @@ void pn_num_flux_boundary_kinetic_N(const float wL[10], float flux[10])
 			  x9 * (0.113213889F - 0.113213889F * beta);
 }
 
-void pn_num_flux_boundary_kinetic_S(const float wL[10], float flux[10])
+void pn_num_flux_boundary_kinetic_B(const float wL[10], float flux[10])
 {
 	const float alpha = ALPHA;
 	const float beta = BETA;

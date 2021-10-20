@@ -102,6 +102,10 @@ def get_model_parameters(model_type, model_name, model_order):
             m = 4
 
     if model_type == "spherical_harmonics":
+        ocl_options.append(
+            "-D USE_SPHERICAL_HARMONICS_P{order}".format(order=model_order)
+        )
+
         if dim == 2:
             m = (model_order * model_order / 2.0) + (3.0 * model_order / 2.0) + 1.0
 

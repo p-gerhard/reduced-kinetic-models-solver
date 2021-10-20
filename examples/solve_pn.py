@@ -11,15 +11,15 @@ os.environ["CUDA_CACHE_DISABLE"] = "1"
 
 if __name__ == "__main__":
 
-    # input_fn = "../data/mesh/unit_square_nx128_ny128.msh"
-    input_fn = "../data/mesh/unit_cube_32.msh"
+    input_fn = "../data/mesh/unit_square_nx128_ny128.msh"
+    # input_fn = "../data/mesh/unit_cube_32.msh"
 
     r = 0.05
     v = (4.0 / 3.0) * np.pi * r * r * r
     parameters = {
         "model_type": "spherical_harmonics",
-        "model_name": "3d",
-        "model_order": 3,
+        "model_name": "2d",
+        "model_order": 11,
         "tmax": 10,
         "cfl": 1,
         "use_muscl": True,

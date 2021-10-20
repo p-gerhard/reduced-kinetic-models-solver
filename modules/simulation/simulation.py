@@ -145,7 +145,7 @@ class Simulation:
 
         return ocl_options
 
-    def __ocl_process_source(self, print_src=True):
+    def __ocl_process_source(self, print_src=False):
 
         with open(self.src_file, "r") as f:
             src = f.read()

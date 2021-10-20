@@ -25,9 +25,6 @@
 
 #include <solver/solver.cl>
 
-#define USE_SPHERICAL_HARMONICS_P3
-
-
 #ifdef USE_SPHERICAL_HARMONICS_P1
 #include <pn/p1.cl>
 #endif
@@ -138,7 +135,7 @@ void vf_num_flux(const float wL[M], const float wR[M], const float vn[DIM],
 	if (vn[1] == -1) {
 		pn_num_flux_kinetic_B(wL, wR, flux);
 	}
-
+#ifndef IS_2D
 	if (vn[2] == 1) {
 		pn_num_flux_kinetic_N(wL, wR, flux);
 	}
@@ -146,6 +143,7 @@ void vf_num_flux(const float wL[M], const float wR[M], const float vn[DIM],
 	if (vn[2] == -1) {
 		pn_num_flux_kinetic_S(wL, wR, flux);
 	}
+#endif
 #else
 	pn_num_flux_rusanov(wL, wR, vn, flux);
 #endif
@@ -161,7 +159,6 @@ void vf_num_flux_boundary(const float wL[M], const float wR[M],
 	if (vn[0] == -1) {
 		pn_num_flux_boundary_kinetic_L(wL, flux);
 	}
-
 	if (vn[1] == 1) {
 		pn_num_flux_boundary_kinetic_F(wL, flux);
 	}
@@ -169,7 +166,7 @@ void vf_num_flux_boundary(const float wL[M], const float wR[M],
 	if (vn[1] == -1) {
 		pn_num_flux_boundary_kinetic_B(wL, flux);
 	}
-
+#ifdef USE_2D
 	if (vn[2] == 1) {
 		pn_num_flux_boundary_kinetic_N(wL, flux);
 	}
@@ -177,5 +174,6 @@ void vf_num_flux_boundary(const float wL[M], const float wR[M],
 	if (vn[2] == -1) {
 		pn_num_flux_boundary_kinetic_S(wL, flux);
 	}
+#endif
 }
 #endif
