@@ -10,15 +10,18 @@ os.environ["CUDA_CACHE_DISABLE"] = "1"
 
 if __name__ == "__main__":
 
-    input_fn = "../data/mesh/unit_cube_32.msh"
+    # input_fn = "../data/mesh/unit_cube_64.msh"    
+    # input_fn = "../data/mesh/3d_star_xy_0125.msh"
+    input_fn = "../data/mesh/salle_3.msh"
 
-    r = 0.05
+
+    r = 0.125
     v = (4.0 / 3.0) * np.pi * r * r * r
     parameters = {
         "model_type": "moments",
         "model_name": "3d_s2",
         "model_order": 1,
-        "tmax": 20,
+        "tmax": 40,
         "cfl": 0.8,
         "use_muscl": False,
         "ocl_options": [

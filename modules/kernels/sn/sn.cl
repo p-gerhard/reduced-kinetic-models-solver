@@ -222,7 +222,7 @@ static void sn_src_circle(const float x[DIM], const float t, float wn[M])
 			}
 		} else {
 			for (int iw = 0; iw < M; iw++) {
-				wn[iw] = quad_wi[iw];
+					wn[iw] = quad_wi[iw];
 			}
 		}
 	} else {

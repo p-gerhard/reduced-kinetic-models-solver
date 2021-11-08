@@ -1,0 +1,192 @@
+\documentclass[a4paper]{standalone}
+
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\usetikzlibrary{positioning}
+\pgfplotsset{compat=newest}    
+\usepgfplotslibrary{colormaps}
+\usepgfplotslibrary{patchplots}
+
+
+%________________ fix graphs in sumatrapdf ________________
+
+\makeatletter \def\pgfplotscolormappdfmax{1} \def\pgfplotscolormappdfmax@inv{1000} \makeatother
+
+%________________ rainbow desaturated colormap ________________
+
+\pgfplotsset{
+    colormap={rainbowdesaturated}{
+        rgb=(0.278431, 0.278431, 0.858824)
+        rgb=(0, 0, 0.360784  )
+        rgb=(0, 1, 1  )
+        rgb=(0, 0.501961, 0  )
+        rgb=(1, 1 , 0  )
+        rgb=(1, 0.380392 , 0  )
+        rgb=(0.419608, 0  , 0 )
+        rgb=(0.878431, 0.301961  , 0.301961 )
+   }
+}
+
+
+
+%________________ improve 2D pgfplots shading ________________
+
+\pgfplotsset{
+    /pgfplots/surf shading/precision=pdf,
+}
+
+\pgfplotsset{
+    /pgfplots/layers/Bowpark/.define layer set={
+        axis background,axis grid,main,axis ticks,axis lines,axis tick labels,
+        axis descriptions,axis foreground
+    }{/pgfplots/layers/standard},
+}
+
+
+\begin{document}
+
+\begin{tikzpicture}
+    \begin{groupplot}[group style = {group name=plots,
+                                    group size = 3 by 1,
+                                    horizontal sep = 2.5cm,
+                                    },
+            view = {0}{90},
+            title style={at={(0.5,0)}, yshift=-1.2cm, anchor=north},
+            label style={font=\footnotesize},
+            tick label style={font=\footnotesize},
+            xticklabel style={yshift=+2pt},
+            yticklabel style={xshift=+2pt},
+            % point meta max=1,
+            samples=50,
+            colorbar,
+            colormap name=rainbowdesaturated,
+            colorbar style = {width = 10,
+                    title style={at={(0.9,1.25)}, anchor=south},
+                    at    = {(1.01,1.0)},
+                    yticklabel style = {align=right},
+                    yticklabel style={
+                            /pgf/number format/fixed,
+                            /pgf/number format/precision=5
+                        },
+                    scaled y ticks=false
+                },
+            xlabel = $x$,
+            % xtick = {0,0.5,1},
+            % xticklabels ={$0$,$0.5$,$1$},
+            ylabel = $y$,
+            % ytick = {0,0.5,1},
+            % yticklabels ={$0$,$0.5$,$1$},
+            width = \textwidth,
+            height= 0.33\textwidth,
+            axis on top,
+            enlargelimits = true,
+            scale only axis=true,
+            mesh/cols=161,
+            mesh/rows=49,
+            mesh/ordering=y varies,
+            unbounded coords=jump,
+        ]
+        \nextgroupplot[title={$t=0.5$}, 
+        colorbar style = {title = {$w$}}]
+        \addplot3[surf,shader=interp] file {./foo.csv};
+
+        
+        \draw[-stealth] (0,1.5,0) -- (1,1.5,0) node[yshift=-2pt, above]{\small$x$};
+        \draw[-stealth] (0,1.5,0) -- (0,2.5,0) node[yshift=-2pt, right]{\small$y$};
+        \node at (0,1.5,0) {$\odot$};
+        \node at (0.2,1.6,0) {$z$};
+     
+       
+        
+        
+        
+        \def\l{1};
+        \def\mainlx{10};
+        \def\mainly{1};
+        \def\subly{2};
+        \def\sublx{1};
+       
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P1)  at (0, 0) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P2)  at (\mainlx, 0) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P3)  at (\mainlx, \mainly) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P5)  at (\mainlx-1, \mainly+\subly) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P6)  at (\mainlx-1-\sublx, \mainly+\subly) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P9)  at (\mainlx-3, \mainly+\subly) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P10) at (\mainlx-3-\sublx, \mainly+\subly) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P13) at (\mainlx-5, \mainly+\subly) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P14) at (\mainlx-5-\sublx, \mainly+\subly) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P17) at (\mainlx-7, \mainly+\subly) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P18) at (\mainlx-7-\sublx, \mainly+\subly) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P20) at (0, \mainly) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P21) at (4.25, 1) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P22) at (4.25, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P23) at (4, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P24) at (4.75, 1) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P25) at (4.75, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P26) at (5, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P27) at (8.75, 1) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P28) at (8.75, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P29) at (9, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P30) at (8.25, 1) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P31) at (8.25, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P32) at (8, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P33) at (6.75, 1) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P34) at (6.75, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P35) at (7, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P36) at (6.25, 1) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P37) at (6.25, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P38) at (6, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P40) at (10, 1) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P41) at (8.25, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P42) at (8.25, 1) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P43) at (2.75, 1) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P44) at (2.75, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P45) at (3, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P47) at (2, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P48) at (2.25, 1.25) {};
+        \node[rectangle,fill=black,inner sep=0pt,minimum size=0.5mm, label={}] (P49) at (2.25, 1) {};
+
+        \draw [line width=0.5mm, black, opacity=1] ( P1.center)  -- (P2.center);
+        \draw [line width=0.5mm, black, opacity=1] ( P2.center)  -- (P3.center);
+        \draw [line width=0.5mm, black, opacity=1] ( P3.center)  -- (P27.center);
+        \draw [line width=0.5mm, black, opacity=1] (P27.center) -- (P28.center);
+        \draw [line width=0.5mm, black, opacity=1] (P28.center) -- (P29.center);
+        \draw [line width=0.5mm, black, opacity=1] (P29.center) -- (P5.center);
+        \draw [line width=0.5mm, black, opacity=1] ( P5.center)  -- (P6.center);
+        \draw [line width=0.5mm, black, opacity=1] ( P6.center)  -- (P32.center);
+        \draw [line width=0.5mm, black, opacity=1] (P32.center) --  (P31.center);
+        \draw [line width=0.5mm, black, opacity=1] (P31.center) --  (P30.center);
+        \draw [line width=0.5mm, black, opacity=1] (P30.center) --  (P33.center);
+        \draw [line width=0.5mm, black, opacity=1] (P33.center) --  (P34.center);
+        \draw [line width=0.5mm, black, opacity=1] (P34.center) --  (P35.center);
+        \draw [line width=0.5mm, black, opacity=1] (P35.center) --  (P9.center);
+        \draw [line width=0.5mm, black, opacity=1] ( P9.center)  --  (P10.center);
+        \draw [line width=0.5mm, black, opacity=1] (P10.center) --  (P38.center);
+        \draw [line width=0.5mm, black, opacity=1] (P38.center) --  (P37.center);
+        \draw [line width=0.5mm, black, opacity=1] (P37.center) --  (P36.center);
+        \draw [line width=0.5mm, black, opacity=1] (P36.center) --  (P24.center);
+        \draw [line width=0.5mm, black, opacity=1] (P24.center) --  (P25.center);
+        \draw [line width=0.5mm, black, opacity=1] (P25.center) --  (P26.center);
+        \draw [line width=0.5mm, black, opacity=1] (P26.center) --  (P13.center);
+        \draw [line width=0.5mm, black, opacity=1] (P13.center) --  (P14.center);
+        \draw [line width=0.5mm, black, opacity=1] (P14.center) --  (P23.center);
+        \draw [line width=0.5mm, black, opacity=1] (P23.center) --  (P22.center);
+        \draw [line width=0.5mm, black, opacity=1] (P22.center) --  (P21.center);
+        \draw [line width=0.5mm, black, opacity=1] (P21.center) --  (P43.center);
+        \draw [line width=0.5mm, black, opacity=1] (P43.center) --  (P44.center);
+        \draw [line width=0.5mm, black, opacity=1] (P44.center) --  (P45.center);
+        \draw [line width=0.5mm, black, opacity=1] (P45.center) --  (P17.center);
+        \draw [line width=0.5mm, black, opacity=1] (P17.center) --  (P18.center);
+        \draw [line width=0.5mm, black, opacity=1] (P18.center) --  (P47.center);
+        \draw [line width=0.5mm, black, opacity=1] (P47.center) --  (P48.center);
+        \draw [line width=0.5mm, black, opacity=1] (P48.center) --  (P49.center);
+        \draw [line width=0.5mm, black, opacity=1] (P49.center) --  (P20.center);
+        \draw [line width=0.5mm, black, opacity=1] (P20.center) --  (P1.center);
+
+
+    \end{groupplot}
+
+
+\end{tikzpicture}
+\end{document}
+

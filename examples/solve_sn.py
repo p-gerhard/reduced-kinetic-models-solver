@@ -12,9 +12,10 @@ os.environ["CUDA_CACHE_DISABLE"] = "1"
 if __name__ == "__main__":
 
     # input_fn = "../data/mesh/unit_square_nx128_ny128.msh"
-    input_fn = "../data/mesh/unit_cube_32.msh"
+    # input_fn = "../data/mesh/unit_cube_64.msh"
+    input_fn = "../data/mesh/3d_star_xy_0125.msh"
 
-    r = 0.05
+    r = 0.125
     v = (4.0 / 3.0) * np.pi * r * r * r
     parameters = {
         "model_type": "ordinates",
@@ -22,7 +23,7 @@ if __name__ == "__main__":
         "model_name": "3d_lebedev",
         "model_order": 50,
         # "model_order": 64,
-        "tmax": 1.5,
+        "tmax": 40,
         "cfl": 1,
         "use_muscl": True,
         "ocl_options" : ["-cl-fast-relaxed-math"],
@@ -30,9 +31,9 @@ if __name__ == "__main__":
         "alpha": 1, # 1 non-abs / 0 abs
         "beta": 1,  # 0 spec.   / 1 diff.
         "src_toff": 10,
-        "src_x": 0.5,
-        "src_y": 0.5,
-        "src_z": 0.5,
+        "src_x": 0.,
+        "src_y": 0.,
+        "src_z": 1.0,
         "src_r": r,
         "src_v": v,
     }

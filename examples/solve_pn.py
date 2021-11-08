@@ -12,7 +12,7 @@ os.environ["CUDA_CACHE_DISABLE"] = "1"
 if __name__ == "__main__":
 
     input_fn = "../data/mesh/unit_square_nx128_ny128.msh"
-    # input_fn = "../data/mesh/unit_cube_32.msh"
+    # input_fn = "../data/mesh/unit_cube_64.msh"
 
     r = 0.05
     v = (4.0 / 3.0) * np.pi * r * r * r

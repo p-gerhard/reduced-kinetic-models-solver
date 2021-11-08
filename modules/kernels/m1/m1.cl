@@ -108,8 +108,8 @@ static void m1_src_circle(const float x[DIM], const float t, float wn[M])
 
 static void m1_source(const float x[DIM], const float t, float s[M])
 {
-	m1_src_gaussian_line_source(x, t, s);
-	// m1_src_circle_3d(x, t, s);
+	// m1_src_gaussian_line_source(x, t, s);
+	m1_src_circle(x, t, s);
 }
 
 void vf_init_cond(const float x[DIM], const float t, float s[M])
