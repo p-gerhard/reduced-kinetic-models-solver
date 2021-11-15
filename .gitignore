@@ -5,6 +5,8 @@ _pycache__/
 
 #Data
 *.dat
+*.csv
+*.json
 *.h5
 *.h5m
 *.msh
