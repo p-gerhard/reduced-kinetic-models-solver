@@ -149,5 +149,5 @@ class MeshStructured:
             self.cells, (self.nb_cells, self.elem_data["NODE_PER_ELEM"])
         )
 
-        self.mesh = meshio.Mesh(self.points, {self.cell_name: self.cells})
-        self.mesh.write("mesh_output.msh")
+        # self.mesh = meshio.Mesh(self.points, {self.cell_name: self.cells})
+        # self.mesh.write("mesh_output.msh")

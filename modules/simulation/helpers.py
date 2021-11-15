@@ -3,16 +3,77 @@
 
 import glob
 import logging
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+import json
 import os
 import shutil
+import numbers
 import time
 
+
 import numpy as np
+
+
+
+
+
+
+def check_postprocess_parameter(postprocess_parameters):
+    if "time" in postprocess_parameters:
+        assert all(
+            isinstance(t, numbers.Number) for t in postprocess_parameters["time"]
+        )
+
+    if "line" in postprocess_parameters:
+        for line in postprocess_parameters["line"]:
+            assert "point_1" in line
+            point_1 = line["point_1"]
+            assert isinstance(point_1, list)
+
+            len_pt1 = len(point_1)
+            assert len_pt1 == 3 or len_pt1 == 2
+            assert all(isinstance(coord, numbers.Number) for coord in point_1)
+
+            assert "point_2" in line
+            point_2 = line["point_2"]
+            assert isinstance(point_2, list)
+
+            len_pt2 = len(point_2)
+            assert len_pt2 == 3 or len_pt2 == 2
+            assert all(isinstance(coord, numbers.Number) for coord in point_2)
+
+        if "slice" in postprocess_parameters:
+            for slice in postprocess_parameters["slice"]:
+                assert "point" in slice
+                point = slice["point"]
+                assert isinstance(point, list)
+
+                assert len(point) == 3
+                assert all(isinstance(coord, numbers.Number) for coord in point)
+
+                assert "normal" in slice
+                normal = slice["normal"]
+                assert isinstance(normal, list)
+
+                assert len(normal) == 3
+                assert all(isinstance(coord, numbers.Number) for coord in normal)
+
+
+def dump_dic_to_json(dic, filename):
+    # Cast dic data to serializable type
+    dumpable_dic = dic.copy()
+    for key, value in dumpable_dic.items():
+        if isinstance(value, np.floating):
+            dumpable_dic[key] = float(dumpable_dic[key])
+
+        if isinstance(value, np.integer):
+            dumpable_dic[key] = int(dumpable_dic[key])
+
+    with open(filename, "w") as file:
+        json.dump(dumpable_dic, file, indent=4, sort_keys=True)
 
 
 def pprint_dict(dict, indent=0):
@@ -28,21 +89,20 @@ def pprint_dict(dict, indent=0):
             print(indent * "\t" + "- {:<20} {}".format(k, v))
 
 
-
 def make_folder_empty(folder):
-        try:
-            os.mkdir(folder)
-        except:
-            pass
+    try:
+        os.mkdir(folder)
+    except:
+        pass
 
-        for filename in os.listdir(folder):
-            file_path = os.path.join(folder, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-            except Exception as e:
-                print('Failed to delete {}. Reason: {}'.format(file_path, e))
- 
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+        except Exception as e:
+            print("Failed to delete {}. Reason: {}".format(file_path, e))
+
 
 def check_inclusion_and_type(input_param, ref_param, msg_header=""):
     is_missing = False

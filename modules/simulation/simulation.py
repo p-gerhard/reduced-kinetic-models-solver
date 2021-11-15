@@ -4,6 +4,8 @@
 from distutils import dir_util
 import glob
 import logging
+from operator import pos
+import json
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -21,11 +23,18 @@ from pyopencl import _find_pyopencl_include_path
 
 from modules.mesh import *
 from .helpers import *
+from .postprocess_paraview import pvbatch_subprocess_caller
 from .model import is_implemented, get_model_parameters
 
 
 class Simulation:
-    def __init__(self, parameters, mesh_filename=None, output_filename="output.xmf"):
+    def __init__(
+        self,
+        parameters,
+        mesh_filename=None,
+        output_filename="output.xmf",
+        postprocess_parameters=None,
+    ):
         logging.basicConfig(
             format="[%(asctime)s] - %(levelname)s - %(message)s",
             datefmt="%m/%d/%Y %I:%M:%S %p",
@@ -86,7 +95,23 @@ class Simulation:
 
         pprint_dict(self.parameters, indent=5)
 
+        dump_dic_to_json(
+            self.parameters,
+            os.path.join(self.output_folder, "simulation_parameters.json"),
+        )
+
         self.source = self.__ocl_process_source()
+
+        if postprocess_parameters is not None:
+            check_postprocess_parameter(postprocess_parameters)
+            self.postprocess_parameters = postprocess_parameters
+            # We inject the dimension of the simulation to facilitate
+            # postprocessing in paraview
+            self.postprocess_parameters["dim"] = self.dim
+            dump_dic_to_json(
+                self.postprocess_parameters,
+                os.path.join(self.output_folder, "postprocess_parameters.json"),
+            )
 
     def __check_required_input_parameters(self, parameters):
 
@@ -181,7 +206,11 @@ class Simulation:
 
         self.ocl_ctx = cl.create_some_context(interactive=True)
         self.ocl_prg = cl.Program(self.ocl_ctx, self.source)
+
+        logger.info("{:<30}".format("OpenCL - Building target"))
+        t_start = time.time()
         self.ocl_prg.build(options=self.ocl_options)
+        logger.info("{:<30}: {:>6.8f} s".format("OpenCL - Target build in", time.time() - t_start))
 
         # Remove copied files
         if copy_kernel_to_ocl_path:
@@ -196,7 +225,7 @@ class Simulation:
         # OpenCL GPU solution buffers
         self.wn_device = cl_array.empty(self.ocl_queue, buffer_size, dtype=np.float32)
         self.wnp1_device = cl_array.empty(self.ocl_queue, buffer_size, dtype=np.float32)
-
+        
         # OpenCL cells coordinates buffer
         self.cells_center_device = cl_array.to_device(
             self.ocl_queue, self.mesh.cells_center
@@ -282,15 +311,21 @@ class Simulation:
 
         xdmf_writer.write_data(self.t, cell_data=cd)
 
+    def postprocess_data(self):
+            if self.postprocess_parameters["type"] == "paraview":
+                pvbatch_subprocess_caller(self.output_folder)
+
     def solve(self):
         self.__ocl_build_and_setup()
+        logger.info("{:<30}".format("OpenCL allocation started"))
         self.__ocl_allocate_devices_buffer()
+        logger.info("{:<30}".format("OpenCL allocation ended"))
         self.__allocate_host_buffer()
 
         self.t = 0
         ite = 0
 
-        logger.info("{:<30}".format("OpenCL computations started"))
+        logger.info("{:<30}".format("OpenCL - Computations started"))
 
         t1 = time.time()
 
@@ -353,5 +388,9 @@ class Simulation:
             )
         )
 
+        if self.postprocess_parameters is not None:
+            self.postprocess_data()
+            
         plt.plot(self.t_tab, self.w0_tot / np.max(self.w0_tot))
+        plt.title('Normalized total energy density')
         plt.show()

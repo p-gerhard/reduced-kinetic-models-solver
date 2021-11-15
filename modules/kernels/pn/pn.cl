@@ -93,7 +93,7 @@ void pn_src_circle(const float x[DIM], const float t, float w[M])
 
 	if (t < SRC_TOFF) {
 		if (d <= SRC_R * SRC_R) {
-			w[0] = 1.f / SRC_V;
+			w[0] = 1.f;
 		}
 	}
 }
@@ -110,10 +110,11 @@ void vf_init_cond(const float x[DIM], const float t, float s[M])
 
 void vf_source(const float x[DIM], const float wn[M], const float t, float s[M])
 {
-#pragma unroll
-	for (int iv = 0; iv < M; iv++) {
-		s[iv] = 0.f;
-	}
+	pn_source(x, t, s);
+// #pragma unroll
+// 	for (int iv = 0; iv < M; iv++) {
+// 		s[iv] = 0.f;
+// 	}
 }
 
 void vf_num_flux(const float wL[M], const float wR[M], const float vn[DIM],
@@ -166,7 +167,7 @@ void vf_num_flux_boundary(const float wL[M], const float wR[M],
 	if (vn[1] == -1) {
 		pn_num_flux_boundary_kinetic_B(wL, flux);
 	}
-#ifdef USE_2D
+#ifndef USE_2D
 	if (vn[2] == 1) {
 		pn_num_flux_boundary_kinetic_N(wL, flux);
 	}
