@@ -28,15 +28,15 @@ def delete_constant_column(data, column_id_to_check):
     return d
 
 
-def pvbatch_subprocess_caller(output_folder):
+def pvbatch_subprocess_caller(xmf_filename):
     from subprocess import run, PIPE
 
     p = run(
         [
             "pvbatch",
             os.path.abspath(__file__),
-            "--d",
-            os.path.abspath(output_folder),
+            "--f",
+            os.path.abspath(xmf_filename),
         ],
         stdout=PIPE,
         encoding="ascii",
@@ -240,8 +240,8 @@ def paraview_dump_slice(
     ExportView(csv_filename, view=spreadsheet_view)
 
 
-def paraview_extract_data_to_csv(output_folder):
-    xdmf_filename = os.path.join(output_folder, "results.xmf")
+def paraview_extract_data_to_csv(xdmf_filename):
+    output_folder = os.path.dirname(xdmf_filename)
     json_filename = os.path.join(output_folder, "postprocess_parameters.json")
 
     with open(json_filename, "r") as json_file:
@@ -344,8 +344,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--d", help="Path to the directory containing xdmf files", type=str
+        "--f", help="Path to the xdmf file", type=str
     )
     args = parser.parse_args()
 
-    paraview_extract_data_to_csv(args.d)
+    paraview_extract_data_to_csv(args.f)

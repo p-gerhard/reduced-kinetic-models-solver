@@ -244,10 +244,11 @@ void vf_init_cond(const float x[DIM], const float t, float s[M])
 
 void vf_source(const float x[DIM], const float wn[M], const float t, float s[M])
 {
-#pragma unroll
-	for (int iv = 0; iv < M; iv++) {
-		s[iv] = 0.f;
-	}
+	sn_source(x, t, s);
+// #pragma unroll
+// 	for (int iv = 0; iv < M; iv++) {
+// 		s[iv] = 0.f;
+// 	}
 }
 
 void vf_num_flux(const float wL[M], const float wR[M], const float vn[DIM],

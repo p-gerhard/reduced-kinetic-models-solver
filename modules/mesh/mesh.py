@@ -21,6 +21,36 @@ from .lib.mesh_process import (
 )
 
 
+def get_geometry_volume(nb_cells, dx, dy, dz, is_2d):
+    if is_2d:
+        volume = nb_cells * dx * dy
+    else:
+        volume = nb_cells * dx * dy * dz
+
+    return volume
+
+
+def get_geometry_surface(nb_cells, elem2elem, dx, dy, dz, is_2d):
+    surface = 0
+
+    if is_2d:
+        face_area = [dy, dx, dy, dx]
+
+        for idx_elem in range(nb_cells):
+            for idx_face in range(0, 4):
+                if elem2elem[idx_elem * 4  + idx_face] == -1:
+                    surface += face_area[idx_face]
+    else:
+        face_area = [dz * dy, dz * dy, dz * dx, dz * dx, dx * dy, dx * dy]
+    
+        for idx_elem in range(nb_cells):
+            for idx_face in range(0, 6):
+                if elem2elem[idx_elem * 6 + idx_face] == -1:
+                    surface += face_area[idx_face]
+
+    return surface
+
+
 class MeshStructured:
     def __init__(self, filename, dim, mesh_param=None):
 
@@ -30,7 +60,7 @@ class MeshStructured:
 
         self.elem_data = None
         is_2d = False
-        
+
         # Load proper cell type according to the physical dimension
         if self.dim == 2:
             is_2d = True
@@ -101,14 +131,13 @@ class MeshStructured:
 
             self.dx = np.float32(self.cell_size[0])
             logger.info("{:<30}: {:>6.8f}".format("Size dx", self.cell_size[0]))
-            
+
             self.dy = np.float32(self.cell_size[1])
             logger.info("{:<30}: {:>6.8f}".format("Size dy", self.cell_size[1]))
 
-
-            if is_2d :
-                 self.dz = np.float32(0.)
-            else :
+            if is_2d:
+                self.dz = np.float32(0.0)
+            else:
                 self.dz = np.float32(self.cell_size[2])
                 logger.info("{:<30}: {:>6.8f}".format("Size dz", self.cell_size[2]))
 
@@ -143,6 +172,13 @@ class MeshStructured:
             logger.info(
                 "{:<30}: {:>6.8f} sec.".format("Connectivity checked in", duration)
             )
+
+        # Compute volume and area of the mesh
+        self.volume = get_geometry_volume(self.nb_cells, self.dx, self.dy, self.dz, is_2d)
+
+        self.surface = get_geometry_surface(
+            self.nb_cells, self.elem2elem, self.dx, self.dy, self.dz, is_2d
+        )
 
         self.points = np.reshape(self.nodes, (self.nb_nodes, self.dim))
         self.cells = np.reshape(

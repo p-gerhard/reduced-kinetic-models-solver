@@ -3,10 +3,10 @@ DefineConstant[xmin = {0, Name "xmin"} ];
 DefineConstant[ymin = {0, Name "ymin"} ];
 DefineConstant[zmin = {0, Name "zmin"} ];
 DefineConstant[xmax = {1, Name "xmax" , Min xmin}];
-DefineConstant[ymax = {1, Name "ymax",  Min ymin}];
+DefineConstant[ymax = {10, Name "ymax",  Min ymin}];
 DefineConstant[zmax = {1, Name "zmax",  Min zmin}];
 DefineConstant[rafx = {32, Name "rafx", Min 0}];
-DefineConstant[rafy = {32, Name "rafy", Min 0}];
+DefineConstant[rafy = {320, Name "rafy", Min 0}];
 DefineConstant[rafz = {32, Name "rafz", Min 0}];
 
 Point(1) = {xmin, ymin, zmin};

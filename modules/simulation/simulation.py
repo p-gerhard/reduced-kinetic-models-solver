@@ -23,7 +23,8 @@ from pyopencl import _find_pyopencl_include_path
 
 from modules.mesh import *
 from .helpers import *
-from .postprocess_paraview import pvbatch_subprocess_caller
+from modules.postprocessing import pvbatch_subprocess_caller
+from modules.postprocessing import RoomSimulation
 from .model import is_implemented, get_model_parameters
 
 
@@ -70,7 +71,7 @@ class Simulation:
             self.dim, self.cfl, self.mesh.dx, self.mesh.dy, self.mesh.dz
         )
 
-        self.__setup_output_folder()
+        self.__setup_output_folder(parameters)
 
         # Fill global simulation dictionary with all the parameters
         self.parameters = parameters
@@ -87,6 +88,8 @@ class Simulation:
                 "dz": self.mesh.dz,
                 "ngrid": self.mesh.nb_cells,
                 "xmf_filename": self.xmf_filename,
+                "geometry_volume": self.mesh.volume,
+                "geometry_surface": self.mesh.surface,
             }
         )
 
@@ -142,15 +145,29 @@ class Simulation:
         ):
             exit()
 
-    def __setup_output_folder(self):
+    def __setup_output_folder(self, parameters):
 
         time_str = time.strftime("%Y%m%d-%H%M%S")
-        self.output_folder = "{}_{}_order{}".format(
-            self.model_type, self.model_name, self.model_order
-        )
 
-        fn = "{}{}".format("results", ".xmf")
-        self.xmf_filename = os.path.join(self.output_folder, fn)
+        if "alpha" in parameters:
+            alpha_tag = str(parameters["alpha"])[:4].replace(".", "")
+
+            self.output_folder = "{}_{}_order{}_alpha_{}".format(
+                self.model_type, self.model_name, self.model_order, alpha_tag
+            )
+
+            fn = "{header}_alpha_{alpha_tag}.xmf".format(
+                header="results", alpha_tag=alpha_tag
+            )
+
+        else:
+            self.output_folder = "{}_{}_order{}".format(
+                self.model_type, self.model_name, self.model_order
+            )
+
+            fn = "{}{}".format("results", ".xmf")
+
+        self.xmf_filename = os.path.abspath(os.path.join(self.output_folder, fn))
 
         fn = "{}{}".format("density_tot", ".dat")
         self.density_tot_filename = os.path.join(self.output_folder, fn)
@@ -210,7 +227,11 @@ class Simulation:
         logger.info("{:<30}".format("OpenCL - Building target"))
         t_start = time.time()
         self.ocl_prg.build(options=self.ocl_options)
-        logger.info("{:<30}: {:>6.8f} s".format("OpenCL - Target build in", time.time() - t_start))
+        logger.info(
+            "{:<30}: {:>6.8f} s".format(
+                "OpenCL - Target build in", time.time() - t_start
+            )
+        )
 
         # Remove copied files
         if copy_kernel_to_ocl_path:
@@ -225,7 +246,7 @@ class Simulation:
         # OpenCL GPU solution buffers
         self.wn_device = cl_array.empty(self.ocl_queue, buffer_size, dtype=np.float32)
         self.wnp1_device = cl_array.empty(self.ocl_queue, buffer_size, dtype=np.float32)
-        
+
         # OpenCL cells coordinates buffer
         self.cells_center_device = cl_array.to_device(
             self.ocl_queue, self.mesh.cells_center
@@ -312,8 +333,8 @@ class Simulation:
         xdmf_writer.write_data(self.t, cell_data=cd)
 
     def postprocess_data(self):
-            if self.postprocess_parameters["type"] == "paraview":
-                pvbatch_subprocess_caller(self.output_folder)
+        if self.postprocess_parameters["type"] == "paraview":
+            pvbatch_subprocess_caller(self.xmf_filename)
 
     def solve(self):
         self.__ocl_build_and_setup()
@@ -390,7 +411,16 @@ class Simulation:
 
         if self.postprocess_parameters is not None:
             self.postprocess_data()
-            
-        plt.plot(self.t_tab, self.w0_tot / np.max(self.w0_tot))
-        plt.title('Normalized total energy density')
-        plt.show()
+
+        # plt.plot(self.t_tab, self.w0_tot / np.max(self.w0_tot))
+        # plt.title("Normalized total energy density")
+        # plt.show()
+
+        room = RoomSimulation(
+            self.density_tot_filename,
+            self.mesh.volume,
+            self.mesh.surface,
+            1 - self.parameters["alpha"],
+            self.parameters["src_toff"],
+            t_max=self.parameters["tmax"],
+        )

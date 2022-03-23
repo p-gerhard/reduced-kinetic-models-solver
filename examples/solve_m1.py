@@ -11,8 +11,10 @@ os.environ["CUDA_CACHE_DISABLE"] = "1"
 if __name__ == "__main__":
 
     # input_fn = "../data/mesh/unit_cube_64.msh"
+    # input_fn = "../data/mesh/corridor_x1_y10_z_1_32.msh"
+    input_fn = "../data/mesh/corridor_x1_y10_z_1_16.msh"
     # input_fn = "../data/mesh/3d_star_xy_0125.msh"
-    input_fn = "../data/mesh/salle_3.msh"
+    # input_fn = "../data/mesh/salle_3.msh"
 
     r = 0.125
     v = (4.0 / 3.0) * np.pi * r * r * r
@@ -20,16 +22,16 @@ if __name__ == "__main__":
         "model_type": "moments",
         "model_name": "3d_s2",
         "model_order": 1,
-        "tmax": 1,
+        "tmax": 90,
         "cfl": 0.9,
-        "use_muscl": True,
+        "use_muscl": False,
         "ocl_options": [
             "-cl-fast-relaxed-math",
             # "-D USE_KINETIC_NUM_FLUX",
             "-D USE_QUAD_LEBEDEV",
         ],
         "sigma": 0,
-        "alpha": 0.80,  # 1 non-abs / 0 abs
+        "alpha": 0.9,  # 1 non-abs / 0 abs
         "beta": 1,  # 0 spec.   / 1 diff.
         "src_toff": 60,
         "src_x": 0.5,
