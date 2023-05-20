@@ -15,7 +15,7 @@ _pycache__/
 *.xmf
 *.xml
 .cache/
-
+*.pvsm
 # VSCode
 .vscode
 .clangd
